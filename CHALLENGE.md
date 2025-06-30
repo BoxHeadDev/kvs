@@ -1,33 +1,36 @@
-# Key-Value Remove Challenge
+# Key-Value Open Challenge
 
-## Challenge: Implement the `remove` method for `KvStore`
+## Challenge: Implement the `open` method for `KvStore`
 
-The `KvStore` is a persistent key-value store that logs all operations to disk
-using an append-only log format. Keys and their corresponding positions in
-the log are stored in the in-memory `index`.
+The `KvStore` persists key-value pairs in log files. When opening a store from disk,
+we must reconstruct the store's state by inspecting all past logs and preparing
+for future writes.
 
 ### Background:
-The store supports removing keys by appending a `Remove` command to the log.
-To do this, we must:
-- Ensure the key exists in the in-memory index.
-- Log a `Command::Remove` for that key.
-- Remove the key from the in-memory index.
+- Each log file is named with a generation number (e.g., `1.log`, `2.log`).
+- The `KvStore` uses an in-memory index to map keys to their latest command position.
+- When opening the store, all `.log` files must be scanned in order to reconstruct
+  this index and prepare a writer for the next generation log file.
 
-### Task:
-Implement the `remove` method that:
-1. Checks if the key exists in `self.index`.
-2. If it doesn't exist, return `Err(KvsError::KeyNotFound)`.
-3. If it does exist, serialize and write a `Remove` command to the writer.
-4. Flush the writer to ensure it's written to disk.
-5. Remove the key from the `index`.
+### Goals:
+Implement the `KvStore::open` function along with these helper functions:
 
-### Signature:
-```rust
-pub fn remove(&mut self, key: String) -> Result<()>
-```
+#### `log_path(dir: &Path, file_id: u64) -> PathBuf`
+- Returns the full path to the log file for a given generation number.
 
-### Notes:
-- The `index` contains the latest known position for each key on disk.
-- You **must** remove the key from the index after appending the `Remove` command.
-- If the key is missing, return `KvsError::KeyNotFound`.
+#### `sorted_file_list(path: &Path) -> Result<Vec<u64>>`
+- Scans the directory for `.log` files,
+- Extracts and sorts their generation numbers,
+- Returns the sorted list.
+
+#### `new_log_file(...) -> Result<BufWriterWithPos<File>>`
+- Creates a new `.log` file for writing,
+- Adds its corresponding `BufReaderWithPos` to the `readers` map,
+- Returns a new `BufWriterWithPos` for writing new commands.
+
+#### `KvStore::open(path: impl Into<PathBuf>) -> Result<KvStore>`
+- Creates the directory if it doesn't exist,
+- Initializes the log readers and the writer,
+- Sets `current_file` to the next available generation number,
+- Returns a fully initialized `KvStore`.
 

@@ -1,35 +1,33 @@
-# Key-Value Get Challenge
+# Key-Value Remove Challenge
 
-## Challenge: Implement the `get` method for `KvStore`
+## Challenge: Implement the `remove` method for `KvStore`
 
-The `KvStore` is a key-value store that persists commands in an append-only log.
-This challenge is to implement the `get` method for `KvStore`.
+The `KvStore` is a persistent key-value store that logs all operations to disk
+using an append-only log format. Keys and their corresponding positions in
+the log are stored in the in-memory `index`.
 
 ### Background:
-The store maintains a `BTreeMap<String, CommandPos>` index in memory, which
-maps keys to their location in the log files. Each `CommandPos` contains:
-- `file_id`: which generation file to look into,
-- `pos`: byte offset to start reading from,
-- `len`: length of the command in bytes.
-
-Log files are accessed via the `readers` HashMap, which maps generation numbers to `BufReaderWithPos<File>`.
-
-Each command in the log is a JSON-encoded enum `Command`, which can be either `Set` or `Remove`.
+The store supports removing keys by appending a `Remove` command to the log.
+To do this, we must:
+- Ensure the key exists in the in-memory index.
+- Log a `Command::Remove` for that key.
+- Remove the key from the in-memory index.
 
 ### Task:
-Complete the `get` method to:
-1. Check if the key exists in the index.
-2. If it exists, use the corresponding reader to seek and read the `Set` command from disk.
-3. Return the associated value as `Some(value)` if successful.
-4. If the command found is not a `Set`, return `KvsError::UnexpectedCommandType`.
-5. If the key does not exist, return `Ok(None)`.
+Implement the `remove` method that:
+1. Checks if the key exists in `self.index`.
+2. If it doesn't exist, return `Err(KvsError::KeyNotFound)`.
+3. If it does exist, serialize and write a `Remove` command to the writer.
+4. Flush the writer to ensure it's written to disk.
+5. Remove the key from the `index`.
 
 ### Signature:
 ```rust
-pub fn get(&mut self, key: String) -> Result<Option<String>>;
+pub fn remove(&mut self, key: String) -> Result<()>
 ```
 
-### Hint:
-Use `reader.seek(SeekFrom::Start(cmd_pos.pos))?` and `reader.take(cmd_pos.len)` to read the specific range from the log file.
-
+### Notes:
+- The `index` contains the latest known position for each key on disk.
+- You **must** remove the key from the index after appending the `Remove` command.
+- If the key is missing, return `KvsError::KeyNotFound`.
 

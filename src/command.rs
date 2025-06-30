@@ -39,7 +39,8 @@ impl Command {
     ///
     /// # Example
     ///
-    /// ```
+    /// `` `
+    /// # use kvs::Command;
     /// let cmd = Command::set("name".to_string(), "Alice".to_string());
     /// ```
     pub fn set(key: String, value: String) -> Command {
@@ -55,6 +56,7 @@ impl Command {
     /// # Example
     ///
     /// ```
+    /// # use kvs::Command;
     /// let cmd = Command::remove("name".to_string());
     /// ```
     pub fn remove(key: String) -> Command {

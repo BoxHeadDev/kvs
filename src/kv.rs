@@ -11,16 +11,20 @@ use crate::{BufReaderWithPos, BufWriterWithPos, Command, CommandPos, KvsError, R
 
 /// The `KvStore` stores string key/value pairs.
 ///
-/// Key/value pairs are stored in a `HashMap` in memory and not persisted to disk.
-///
-/// Example:
+/// Key/value pairs are persisted to disk in log files. Log files are named after
+/// monotonically increasing generation numbers with a `log` extension name.
+/// A `BTreeMap` in memory stores the keys and the value locations for fast query.
 ///
 /// ```rust
-/// # use kvs::KvStore;
-/// let mut store = KvStore::new();
-/// store.set("key".to_owned(), "value".to_owned());
-/// let val = store.get("key".to_owned());
+/// # use kvs::{KvStore, Result};
+/// # fn try_main() -> Result<()> {
+/// use std::env::current_dir;
+/// let mut store = KvStore::open(current_dir()?)?;
+/// store.set("key".to_owned(), "value".to_owned())?;
+/// let val = store.get("key".to_owned())?;
 /// assert_eq!(val, Some("value".to_owned()));
+/// # Ok(())
+/// # }
 /// ```
 pub struct KvStore {
     // directory for the log and other data.
@@ -52,6 +56,7 @@ impl KvStore {
 
         for &file_id in &file_list {
             let mut reader = BufReaderWithPos::new(File::open(log_path(&path, file_id))?)?;
+            load(file_id, &mut reader, &mut index)?;
             readers.insert(file_id, reader);
         }
 
@@ -136,13 +141,36 @@ impl KvStore {
     }
 }
 
+fn load(
+    file_id: u64,
+    reader: &mut BufReaderWithPos<File>,
+    index: &mut BTreeMap<String, CommandPos>,
+) -> Result<()> {
+    // To make sure we read from the beginning of the file.
+    let mut pos = reader.seek(SeekFrom::Start(0))?;
+    let mut stream = Deserializer::from_reader(reader).into_iter::<Command>();
+    while let Some(cmd) = stream.next() {
+        let new_pos = stream.byte_offset() as u64;
+        match cmd? {
+            Command::Set { key, .. } => {
+                index.insert(key, (file_id, pos..new_pos).into());
+            }
+            Command::Remove { key } => {
+                index.remove(&key);
+            }
+        }
+        pos = new_pos;
+    }
+    Ok(())
+}
+
 fn log_path(dir: &Path, file_id: u64) -> PathBuf {
     dir.join(format!("{}.log", file_id))
 }
 
 /// Returns sorted generation numbers in the given directory.
 fn sorted_file_list(path: &Path) -> Result<Vec<u64>> {
-    let mut gen_list: Vec<u64> = fs::read_dir(&path)?
+    let mut file_list: Vec<u64> = fs::read_dir(&path)?
         .flat_map(|res| -> Result<_> { Ok(res?.path()) })
         .filter(|path| path.is_file() && path.extension() == Some("log".as_ref()))
         .flat_map(|path| {
@@ -153,8 +181,8 @@ fn sorted_file_list(path: &Path) -> Result<Vec<u64>> {
         })
         .flatten()
         .collect();
-    gen_list.sort_unstable();
-    Ok(gen_list)
+    file_list.sort_unstable();
+    Ok(file_list)
 }
 
 /// Create a new log file with given generation number and add the reader to the readers map.

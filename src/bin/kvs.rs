@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
-use kvs::Result;
+use kvs::{KvStore, KvsError, Result};
+use std::env::current_dir;
 use std::process::exit;
 
 /// A simple key-value store
@@ -26,19 +27,24 @@ pub enum Command {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    let mut store = KvStore::open(current_dir()?)?;
+
     match cli.command {
         Command::Set { key, value } => {
-            eprintln!("unimplemented");
-            exit(1);
+            store.set(key.to_string(), value.to_string())?;
         }
-        Command::Get { key } => {
-            eprintln!("unimplemented");
-            exit(1);
-        }
-        Command::Rm { key } => {
-            eprintln!("unimplemented");
-            exit(1);
-        }
+        Command::Get { key } => match store.get(key)? {
+            Some(value) => println!("{}", value),
+            None => println!("Key not found"),
+        },
+        Command::Rm { key } => match store.remove(key) {
+            Ok(()) => {}
+            Err(KvsError::KeyNotFound) => {
+                println!("Key not found");
+                exit(1);
+            }
+            Err(e) => return Err(e),
+        },
     }
     Ok(())
 }

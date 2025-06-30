@@ -1,35 +1,35 @@
-# Key-Value Set Challenge
+# Key-Value Get Challenge
 
-🚀 Challenge: Persist Key-Value Operations to Disk
+## Challenge: Implement the `get` method for `KvStore`
 
-You've transitioned from an in-memory `KvStore` to a log-structured, file-backed key-value store. 
-Your new implementation uses a write-ahead log for durability. 
+The `KvStore` is a key-value store that persists commands in an append-only log.
+This challenge is to implement the `get` method for `KvStore`.
 
-🔧 Task:
-Complete the transition by doing the following:
+### Background:
+The store maintains a `BTreeMap<String, CommandPos>` index in memory, which
+maps keys to their location in the log files. Each `CommandPos` contains:
+- `file_id`: which generation file to look into,
+- `pos`: byte offset to start reading from,
+- `len`: length of the command in bytes.
 
-1. **Remove the use of the old in-memory `HashMap` (`map`)** from `KvStore::new` and `get`/`remove` methods.
-    - Instead, use the `index` (`BTreeMap<String, CommandPos>`) for key lookups.
-    - Implement `get(&self, key: String)` so it:
-      - Looks up the key in the `index`.
-      - Uses the `readers` map to access the correct log file.
-      - Seeks and deserializes the `Command` to return the current value.
- 
-2. **Implement `remove(&mut self, key: String) -> Result<()>`**:
-   - Append a `Remove` command to the log.
-   - Remove the key from the `index`.
+Log files are accessed via the `readers` HashMap, which maps generation numbers to `BufReaderWithPos<File>`.
 
-3. **Fix `KvStore::new()`**:
-   - It currently uses an outdated constructor.
-   - Update it to initialize readers, writer, current generation number, and index from the disk.
+Each command in the log is a JSON-encoded enum `Command`, which can be either `Set` or `Remove`.
 
-🧠 Concepts to Consider:
-- File seeking and position tracking (`BufReaderWithPos`, `CommandPos`)
-- Log compaction (optional stretch goal)
-- Error handling during file I/O and deserialization
+### Task:
+Complete the `get` method to:
+1. Check if the key exists in the index.
+2. If it exists, use the corresponding reader to seek and read the `Set` command from disk.
+3. Return the associated value as `Some(value)` if successful.
+4. If the command found is not a `Set`, return `KvsError::UnexpectedCommandType`.
+5. If the key does not exist, return `Ok(None)`.
 
-🛠️ Bonus:
-- Write unit tests that simulate disk persistence by creating temporary directories.
+### Signature:
+```rust
+pub fn get(&mut self, key: String) -> Result<Option<String>>;
+```
 
-Hint: The `Command` enum likely has variants like `Set` and `Remove`. Use them to deserialize log entries.
+### Hint:
+Use `reader.seek(SeekFrom::Start(cmd_pos.pos))?` and `reader.take(cmd_pos.len)` to read the specific range from the log file.
+
 

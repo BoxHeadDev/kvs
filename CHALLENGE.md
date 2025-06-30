@@ -1,20 +1,35 @@
-# CommandPos Challenge
+# Key-Value Set Challenge
 
-Your task is to define a struct named `CommandPos` that holds metadata
-about the location of a command in a log file. Then, implement the `From` trait
-to allow constructing a `CommandPos` from a tuple: (file ID, byte range).
+🚀 Challenge: Persist Key-Value Operations to Disk
 
-Requirements:
-- Define a struct `CommandPos` with the following public fields:
-- `file: u64` — file identifier
-- `pos: u64` — starting byte offset
-- `len: u64` — length in bytes
+You've transitioned from an in-memory `KvStore` to a log-structured, file-backed key-value store. 
+Your new implementation uses a write-ahead log for durability. 
 
-- Implement `From<(u64, Range<u64>)>` for `CommandPos`, so you can convert a tuple like `(3, 100..150)` into a `CommandPos { file: 3, pos: 100, len: 50 }`
+🔧 Task:
+Complete the transition by doing the following:
 
-use std::ops::Range;
+1. **Remove the use of the old in-memory `HashMap` (`map`)** from `KvStore::new` and `get`/`remove` methods.
+    - Instead, use the `index` (`BTreeMap<String, CommandPos>`) for key lookups.
+    - Implement `get(&self, key: String)` so it:
+      - Looks up the key in the `index`.
+      - Uses the `readers` map to access the correct log file.
+      - Seeks and deserializes the `Command` to return the current value.
+ 
+2. **Implement `remove(&mut self, key: String) -> Result<()>`**:
+   - Append a `Remove` command to the log.
+   - Remove the key from the `index`.
 
-TODO: Define the CommandPos struct here
+3. **Fix `KvStore::new()`**:
+   - It currently uses an outdated constructor.
+   - Update it to initialize readers, writer, current generation number, and index from the disk.
 
-TODO: Implement From<(u64, Range<u64>)> for CommandPos here
+🧠 Concepts to Consider:
+- File seeking and position tracking (`BufReaderWithPos`, `CommandPos`)
+- Log compaction (optional stretch goal)
+- Error handling during file I/O and deserialization
+
+🛠️ Bonus:
+- Write unit tests that simulate disk persistence by creating temporary directories.
+
+Hint: The `Command` enum likely has variants like `Set` and `Remove`. Use them to deserialize log entries.
 

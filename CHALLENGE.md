@@ -1,39 +1,11 @@
-# KvStore Challenge
+# Structopt Challenge
 
-Welcome to the **KvStore** challenge, inspired by the [PingCap Talent Plan](https://github.com/pingcap/talent-plan). This is a bite-sized Rust project that introduces you to implementing a simple in-memory key-value store.
+Welcome to the **Structopt** challenge, inspired by the [PingCap Talent Plan](https://github.com/pingcap/talent-plan). This is a bite-sized Rust project that introduces you to implementing a simple in-memory key-value store.
 
 ## 📚 Overview
 
-You will implement a `KvStore` that supports basic operations like setting, getting, and removing string key/value pairs. The store uses Rust's standard `HashMap` for internal storage and does **not** persist data to disk.
+In this project we used clap to parse command line arguments. It's typical to represent a program's parsed command line arguments as a struct, perhaps named Config or Options. Doing so requires calling the appropriate methods on clap's ArgMatches type. Both steps, for larger programs, require a lot of boilerplate code. The structopt crate greatly reduces boilerplate by allowing you to define a Config struct, annotated to automatically produce a clap command line parser that produces that struct. Some find this approach nicer than writing the clap code explicitly.
 
-This challenge focuses on:
-
-- Using Rust's standard library (`std::collections::HashMap`)
-- Implementing basic data structure methods
-- Writing idiomatic Rust code
-- Understanding ownership and cloning
-
-## 🧠 Learning Objectives
-
-By completing this challenge, you will:
-
-- Get hands-on experience with `HashMap`
-- Learn how to manage ownership and lifetimes in Rust
-- Understand how to structure a simple Rust project
-
-## 🧪 Running the Tests
-
-To check your implementation, run the tests using:
-
-```rust
-cargo test
-```
-
-Make sure all tests pass!
-
-## 📖 References
-
-- [Rust Book](https://doc.rust-lang.org/book/)
-- [std::collections::HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html)
+Modify your program to use structopt for parsing command line arguments instead of using clap directly.
 
 Happy coding! 🚀

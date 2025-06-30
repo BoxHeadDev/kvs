@@ -1,56 +1,54 @@
 # Updated CLI Tests Challenge
 
-Now that your `kvs` key-value store has a working CLI with real functionality, it's time to upgrade your test suite accordingly.
+**Challenge:** Upgrade the KvStore Test Suite for Persistence and Error Handling
 
-Your goal is to **replace stub-based tests** (which assume subcommands are "unimplemented") with **real integration tests** that validate the CLI's behavior end-to-end.
+The current tests for the `KvStore` are written to check basic in-memory behavior.
+Your goal is to **refactor** these tests to ensure the key-value store is also
+persistent across restarts and returns appropriate `Result` types.
 
-### ✅ Objectives
+### Tasks:
 
-Update your existing CLI test suite to:
+1. **Use Temporary Storage**:
+   - Replace in-memory store creation (`KvStore::new()`) with persistent store creation using a temporary directory (`KvStore::open(temp_dir.path())?`).
+   - Use `TempDir` from the `tempfile` crate to create a temporary directory for each test.
 
-1. **Replace all tests expecting "unimplemented" messages** with tests that check:
-   - `kvs set <KEY> <VALUE>` stores a value with no output and a zero exit code
-   - `kvs get <KEY>` retrieves the correct value or prints `"Key not found"` if the key is missing
-   - `kvs rm <KEY>` removes a key silently, or prints `"Key not found"` if it doesn't exist
+2. **Handle Results Properly**:
+   - Update each test function signature to return `Result<()>`.
+   - Properly propagate errors using the `?` operator after each fallible method call (`set`, `get`, `remove`, `open`).
 
-2. **Use `tempfile::TempDir`** and `.current_dir()` to isolate each test’s database
-   - This ensures no shared state across tests
+3. **Add Recovery Verification**:
+   - After writing data to the store, `drop` the store and reopen it to ensure data is actually written to disk and can be recovered.
 
-3. **Add these new integration tests**:
-   - `cli_get_stored`: Set multiple keys using `KvStore` API and verify retrieval via CLI
-   - `cli_rm_stored`: Remove an existing key via CLI and verify it's gone
+4. **Add Test for Non-existent Key Removal**:
+   - Add a test that tries to remove a non-existent key and confirms it returns an error.
 
-4. **Ensure all existing CLI argument validation tests still pass**
+### Original Tests to Refactor:
 
-### 🧰 Tools You’ll Need
+- `get_stored_value`
+- `overwrite_value`
+- `get_non_existent_value`
+- `remove_key`
 
-- `assert_cmd` — to run CLI commands and check exit codes and output
-- `predicates` — to assert against `stdout` or `stderr`
-- `tempfile` — to create isolated directories for testing
-- `kvs::KvStore` — to pre-populate your database where needed
+### New Test to Add:
 
-### 🧪 Example of the Updated Style
+- `remove_non_existent_key`
+
+### Example Hint:
+
+Here's how the beginning of your updated `get_stored_value` test might look:
 
 ```rust
 #[test]
-fn cli_get_non_existent_key() {
-    let temp_dir = TempDir::new().unwrap();
-    Command::cargo_bin("kvs")
-        .unwrap()
-        .args(&["get", "key1"])
-        .current_dir(&temp_dir)
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("Key not found"));
-}
+fn get_stored_value() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+    let mut store = KvStore::open(temp_dir.path())?;
+
+    store.set("key1".to_owned(), "value1".to_owned())?;
+    ...
 ```
 
-### 🏁 Completion Criteria
+Use this pattern across all your tests.
 
-- All your tests pass
-- No test uses `.stderr(contains("unimplemented"))`
-- New tests `cli_get_stored` and `cli_rm_stored` are present and correct
-- Each test uses an isolated directory via `TempDir`
+**Goal**: Ensure your `KvStore` implementation passes all updated tests, demonstrating correctness and durability.
 
-Good luck! Refactoring tests is just as important as writing them—and this will give you confidence in your CLI's real-world behavior.
 

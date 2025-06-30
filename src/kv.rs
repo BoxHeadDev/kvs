@@ -1,12 +1,12 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Deserializer;
 
-use crate::{BufReaderWithPos, BufWriterWithPos, Command, CommandPos, Result};
+use crate::{BufReaderWithPos, BufWriterWithPos, Command, CommandPos, KvsError, Result};
 
 /// The `KvStore` stores string key/value pairs.
 ///
@@ -66,8 +66,26 @@ impl KvStore {
     /// Gets the string value of a given string key.
     ///
     /// Returns `None` if the given key does not exist.
-    pub fn get(&self, key: String) -> Option<String> {
-        self.map.get(&key).cloned()
+    ///
+    /// # Errors
+    ///
+    /// It returns `KvsError::UnexpectedCommandType` if the given command type unexpected.
+    pub fn get(&mut self, key: String) -> Result<Option<String>> {
+        if let Some(cmd_pos) = self.index.get(&key) {
+            let reader = self
+                .readers
+                .get_mut(&cmd_pos.file_id)
+                .expect("Cannot find log reader");
+            reader.seek(SeekFrom::Start(cmd_pos.pos))?;
+            let cmd_reader = reader.take(cmd_pos.len);
+            if let Command::Set { value, .. } = serde_json::from_reader(cmd_reader)? {
+                Ok(Some(value))
+            } else {
+                Err(KvsError::UnexpectedCommandType)
+            }
+        } else {
+            Ok(None)
+        }
     }
 
     /// Remove a given key.

@@ -7,6 +7,8 @@ use predicates::str::{PredicateStrExt, contains, is_empty};
 use std::process::Command; // Standard way to run and configure child processes
 use tempfile::TempDir; // Creates automatically-cleaned temporary directories for test isolation
 
+use kvs::{KvStore, Result};
+
 // Test: Running `kvs` with no arguments should fail
 #[test]
 fn cli_no_args() {

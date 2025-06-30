@@ -5,11 +5,15 @@ use kvs::KvStore;
 //
 #[test]
 fn get_stored_value() {
-    // Create a new key-value store
+    let mut store = KvStore::new(); // Create a new key-value store
 
     // Insert two key-value pairs
+    store.set("key1".to_owned(), "value1".to_owned());
+    store.set("key2".to_owned(), "value2".to_owned());
 
     // Ensure the stored values can be retrieved correctly
+    assert_eq!(store.get("key1".to_owned()), Some("value1".to_owned()));
+    assert_eq!(store.get("key2".to_owned()), Some("value2".to_owned()));
 }
 
 //
@@ -17,15 +21,17 @@ fn get_stored_value() {
 //
 #[test]
 fn overwrite_value() {
-    // Create a new key-value store
+    let mut store = KvStore::new(); // Create a new key-value store
 
     // Set an initial value
-
+    store.set("key1".to_owned(), "value1".to_owned());
     // Confirm it was stored
+    assert_eq!(store.get("key1".to_owned()), Some("value1".to_owned()));
 
-    // Overwrite the existing value for the same key
-
+    // Overwrite the existing value for "key1"
+    store.set("key1".to_owned(), "value2".to_owned());
     // Confirm that the value has been updated
+    assert_eq!(store.get("key1".to_owned()), Some("value2".to_owned()));
 }
 
 //
@@ -33,13 +39,13 @@ fn overwrite_value() {
 //
 #[test]
 fn get_non_existent_value() {
-    // Create a new key-value store
+    let mut store = KvStore::new(); // Create a new key-value store
 
     // Set a single key
+    store.set("key1".to_owned(), "value1".to_owned());
 
     // Try to get a value for a key that hasn't been set
-
-    // Should return None
+    assert_eq!(store.get("key2".to_owned()), None); // Should return None
 }
 
 //
@@ -47,11 +53,14 @@ fn get_non_existent_value() {
 //
 #[test]
 fn remove_key() {
-    // Create a new key-value store
+    let mut store = KvStore::new(); // Create a new key-value store
 
     // Set a key-value pair
+    store.set("key1".to_owned(), "value1".to_owned());
 
     // Remove the key from the store
+    store.remove("key1".to_owned());
 
     // After removal, getting the key should return None
+    assert_eq!(store.get("key1".to_owned()), None);
 }

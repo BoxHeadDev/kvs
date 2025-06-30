@@ -1,44 +1,47 @@
-// Import the HashMap type from the standard library's collections module.
-// HashMap is used to store key-value pairs efficiently.
 use std::collections::HashMap;
 
-// Define a struct named `KvStore` which represents a simple key-value store.
-// The #[derive(Default)] macro automatically implements the Default trait,
-// allowing us to create a default instance of KvStore using KvStore::default().
+/// The `KvStore` stores string key/value pairs.
+///
+/// Key/value pairs are stored in a `HashMap` in memory and not persisted to disk.
+///
+/// Example:
+///
+/// ```rust
+/// # use kvs::KvStore;
+/// let mut store = KvStore::new();
+/// store.set("key".to_owned(), "value".to_owned());
+/// let val = store.get("key".to_owned());
+/// assert_eq!(val, Some("value".to_owned()));
+/// ```
 #[derive(Default)]
 pub struct KvStore {
-    // Internal storage of the KvStore using a HashMap with String keys and values.
+    map: HashMap<String, String>,
 }
 
 impl KvStore {
-    /// Creates and returns a new, empty KvStore.
-    /// This function initializes the internal HashMap.
+    /// Creates a `KvStore`.
     pub fn new() -> KvStore {
-        // Create a new empty HashMap
+        KvStore {
+            map: HashMap::new(),
+        }
     }
 
-    /// Inserts or updates a key-value pair in the store.
+    /// Sets the value of a string key to a string.
     ///
-    /// If the key already exists in the map, its value is overwritten.
+    /// If the key already exists, the previous value will be overwritten.
     pub fn set(&mut self, key: String, value: String) {
-        // Insert or overwrite the key-value pair
+        self.map.insert(key, value);
     }
 
-    /// Retrieves the value associated with a key from the store.
+    /// Gets the string value of a given string key.
     ///
-    /// Returns an `Option<String>`:
-    /// - `Some(value)` if the key exists
-    /// - `None` if the key is not present
-    ///
-    /// `.cloned()` is used to return a copy of the value rather than a reference.
-    /// This avoids lifetime issues and lets the caller own the returned value.
+    /// Returns `None` if the given key does not exist.
     pub fn get(&self, key: String) -> Option<String> {
-        // Look up the value and clone it if found
+        self.map.get(&key).cloned()
     }
 
-    /// Removes a key-value pair from the store.
-    /// If the key doesn't exist, nothing happens.
+    /// Remove a given key.
     pub fn remove(&mut self, key: String) {
-        // Remove the key from the HashMap if it exists
+        self.map.remove(&key);
     }
 }

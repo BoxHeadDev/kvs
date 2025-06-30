@@ -1,66 +1,91 @@
-use kvs::KvStore;
+use kvs::{KvStore, Result};
+use tempfile::TempDir;
 
 //
 // Test 1: Should get previously stored value
 //
 #[test]
-fn get_stored_value() {
-    let mut store = KvStore::new(); // Create a new key-value store
+fn get_stored_value() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+    let mut store = KvStore::open(temp_dir.path())?;
 
-    // Insert two key-value pairs
-    store.set("key1".to_owned(), "value1".to_owned());
-    store.set("key2".to_owned(), "value2".to_owned());
+    store.set("key1".to_owned(), "value1".to_owned())?;
+    store.set("key2".to_owned(), "value2".to_owned())?;
 
-    // Ensure the stored values can be retrieved correctly
-    assert_eq!(store.get("key1".to_owned()), Some("value1".to_owned()));
-    assert_eq!(store.get("key2".to_owned()), Some("value2".to_owned()));
+    assert_eq!(store.get("key1".to_owned())?, Some("value1".to_owned()));
+    assert_eq!(store.get("key2".to_owned())?, Some("value2".to_owned()));
+
+    // Open from disk again and check persistent data.
+    drop(store);
+    let mut store = KvStore::open(temp_dir.path())?;
+    assert_eq!(store.get("key1".to_owned())?, Some("value1".to_owned()));
+    assert_eq!(store.get("key2".to_owned())?, Some("value2".to_owned()));
+
+    Ok(())
 }
 
 //
 // Test 2: Should overwrite existent value
 //
 #[test]
-fn overwrite_value() {
-    let mut store = KvStore::new(); // Create a new key-value store
+fn overwrite_value() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+    let mut store = KvStore::open(temp_dir.path())?;
 
-    // Set an initial value
-    store.set("key1".to_owned(), "value1".to_owned());
-    // Confirm it was stored
-    assert_eq!(store.get("key1".to_owned()), Some("value1".to_owned()));
+    store.set("key1".to_owned(), "value1".to_owned())?;
+    assert_eq!(store.get("key1".to_owned())?, Some("value1".to_owned()));
+    store.set("key1".to_owned(), "value2".to_owned())?;
+    assert_eq!(store.get("key1".to_owned())?, Some("value2".to_owned()));
 
-    // Overwrite the existing value for "key1"
-    store.set("key1".to_owned(), "value2".to_owned());
-    // Confirm that the value has been updated
-    assert_eq!(store.get("key1".to_owned()), Some("value2".to_owned()));
+    // Open from disk again and check persistent data.
+    drop(store);
+    let mut store = KvStore::open(temp_dir.path())?;
+    assert_eq!(store.get("key1".to_owned())?, Some("value2".to_owned()));
+    store.set("key1".to_owned(), "value3".to_owned())?;
+    assert_eq!(store.get("key1".to_owned())?, Some("value3".to_owned()));
+
+    Ok(())
 }
 
 //
 // Test 3: Should get `None` when getting a non-existent key
 //
 #[test]
-fn get_non_existent_value() {
-    let mut store = KvStore::new(); // Create a new key-value store
+fn get_non_existent_value() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+    let mut store = KvStore::open(temp_dir.path())?;
 
-    // Set a single key
-    store.set("key1".to_owned(), "value1".to_owned());
+    store.set("key1".to_owned(), "value1".to_owned())?;
+    assert_eq!(store.get("key2".to_owned())?, None);
 
-    // Try to get a value for a key that hasn't been set
-    assert_eq!(store.get("key2".to_owned()), None); // Should return None
+    // Open from disk again and check persistent data.
+    drop(store);
+    let mut store = KvStore::open(temp_dir.path())?;
+    assert_eq!(store.get("key2".to_owned())?, None);
+
+    Ok(())
 }
 
 //
-// Test 4: Should remove a key
+// Test 4:
 //
 #[test]
-fn remove_key() {
-    let mut store = KvStore::new(); // Create a new key-value store
+fn remove_non_existent_key() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+    let mut store = KvStore::open(temp_dir.path())?;
+    assert!(store.remove("key1".to_owned()).is_err());
+    Ok(())
+}
 
-    // Set a key-value pair
-    store.set("key1".to_owned(), "value1".to_owned());
-
-    // Remove the key from the store
-    store.remove("key1".to_owned());
-
-    // After removal, getting the key should return None
-    assert_eq!(store.get("key1".to_owned()), None);
+//
+// Test 5: Should remove a key
+//
+#[test]
+fn remove_key() -> Result<()> {
+    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
+    let mut store = KvStore::open(temp_dir.path())?;
+    store.set("key1".to_owned(), "value1".to_owned())?;
+    assert!(store.remove("key1".to_owned()).is_ok());
+    assert_eq!(store.get("key1".to_owned())?, None);
+    Ok(())
 }

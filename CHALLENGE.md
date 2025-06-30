@@ -1,98 +1,39 @@
-# KvStore Tests Challenge
+# KvStore Challenge
 
-Welcome to the **KvStore Tests Challenge**, inspired by the [PingCAP Talent Plan](https://github.com/pingcap/talent-plan). This exercise is designed to build your skills in **test-driven development (TDD)** by writing and reasoning about tests **before** implementing functionality.
+Welcome to the **KvStore** challenge, inspired by the [PingCap Talent Plan](https://github.com/pingcap/talent-plan). This is a bite-sized Rust project that introduces you to implementing a simple in-memory key-value store.
 
----
+## 📚 Overview
 
-## 📋 Objective
+You will implement a `KvStore` that supports basic operations like setting, getting, and removing string key/value pairs. The store uses Rust's standard `HashMap` for internal storage and does **not** persist data to disk.
 
-Your goal is to write a series of unit tests for a simple key-value store, `KvStore`, *before* implementing the core logic. This exercise encourages thinking about API design, usage expectations, and correctness upfront.
+This challenge focuses on:
 
----
+- Using Rust's standard library (`std::collections::HashMap`)
+- Implementing basic data structure methods
+- Writing idiomatic Rust code
+- Understanding ownership and cloning
 
-## 📦 Project Structure
+## 🧠 Learning Objectives
 
-- All code and tests are written in **Rust**.
-- You will define and test the behavior of the `KvStore` struct.
-- No need to implement the internal logic yet — start by writing the tests!
+By completing this challenge, you will:
 
----
+- Get hands-on experience with `HashMap`
+- Learn how to manage ownership and lifetimes in Rust
+- Understand how to structure a simple Rust project
 
-## 🧪 What to Test
+## 🧪 Running the Tests
 
-Below are the key behaviors you are expected to test. You will create **unit tests** to assert these behaviors.
-
-### 1. Get Previously Stored Value
-
-```rust
-store.set("key1", "value1");
-store.set("key2", "value2");
-assert_eq!(store.get("key1"), Some("value1".to_owned()));
-assert_eq!(store.get("key2"), Some("value2".to_owned()));
-```
-
-### 2. Overwrite Existing Value
+To check your implementation, run the tests using:
 
 ```rust
-store.set("key1", "value1");
-store.set("key1", "value2");
-assert_eq!(store.get("key1"), Some("value2".to_owned()));
+cargo test
 ```
 
-### 3. Get Non-existent Key
+Make sure all tests pass!
 
-```rust
-store.set("key1", "value1");
-assert_eq!(store.get("key2"), None);
-```
+## 📖 References
 
-### 4. Remove a Key
+- [Rust Book](https://doc.rust-lang.org/book/)
+- [std::collections::HashMap](https://doc.rust-lang.org/std/collections/struct.HashMap.html)
 
-```rust
-store.set("key1", "value1");
-store.remove("key1");
-assert_eq!(store.get("key1"), None);
-```
-
----
-
-## 🛠️ Getting Started
-
-1. **Clone the repo** (or create your own minimal Rust project).
-2. Create a test file: `tests/kv_store.rs`.
-3. Write the tests listed above using `#[test]` and `assert_eq!`.
-4. Use TDD: Do not implement `KvStore` until all tests are defined and written.
-5. Implement `KvStore` to make all tests pass.
-
----
-
-## 🚧 Constraints
-
-- Do **not** use any external key-value libraries.
-- You may use `std::collections::HashMap` internally.
-- Focus on correctness and clarity.
-
----
-
-## 🧠 Why This Matters
-
-Writing tests before code:
-- Encourages thoughtful API design.
-- Helps catch logic errors early.
-- Builds confidence in code changes.
-
-This challenge simulates the real-world scenario of designing systems from the outside in, promoting a robust and testable architecture.
-
----
-
-## ✅ Bonus
-
-Once the in-memory store works, consider:
-- Writing CLI tests using `assert_cmd`.
-- Persisting data to disk.
-- Handling errors gracefully.
-
----
-
-Happy testing! 🧪🚀
-
+Happy coding! 🚀

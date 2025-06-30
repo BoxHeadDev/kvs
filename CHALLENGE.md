@@ -1,51 +1,73 @@
 # CLI Test Challenge
 
-Welcome to the first step in building your own key-value store as part of a PingCap Talent Plan-inspired project! 🎯
+Welcome to the **CLI Challenge**, a bite-sized task derived from the [PingCAP Talent Plan](https://github.com/pingcap/talent-plan). This challenge will help you practice building a simple command-line interface (CLI) tool using Rust and the [`clap`](https://docs.rs/clap/) crate.
 
-This challenge focuses on writing **CLI tests** for a `kvs` binary. The goal is to ensure the program handles various CLI invocations correctly — including input validation, basic structure, and placeholder responses for unimplemented functionality.
+## 🚀 Objective
 
----
+Implement a basic key-value store CLI in Rust that supports three commands:
 
-## 🔍 What You’ll Be Testing
+- `set <KEY> <VALUE>`: Set a string value for a string key.
+- `get <KEY>`: Retrieve the value for a given key.
+- `rm <KEY>`: Remove a key-value pair by key.
 
-You will write unit tests using the [`assert_cmd`](https://docs.rs/assert_cmd) and [`predicates`](https://docs.rs/predicates) crates to verify that the `kvs` CLI behaves as expected. These tests are meant to run against a **starter binary** that has not yet implemented the actual key-value logic.
+The starting code already defines the CLI interface using `clap`. Your task is to **write the internal logic** to make the commands work and pass the associated tests.
 
-### CLI Behavior to Validate
+## 🧪 Behavior
 
-| Command | Expected Behavior |
-|--------|--------------------|
-| `kvs` (no args) | Fails with non-zero exit code |
-| `kvs -V` | Prints version (from `CARGO_PKG_VERSION`) |
-| `kvs get <KEY>` | Fails, prints `"unimplemented"` to stderr |
-| `kvs set <KEY> <VALUE>` | Fails, prints `"unimplemented"` to stderr |
-| `kvs rm <KEY>` | Fails, prints `"unimplemented"` to stderr |
-| Invalid argument counts (too few or too many) | Fails |
-| Unknown subcommands | Fails |
+Here is how the CLI is expected to behave:
 
----
+### 1. Set a key
 
-## ✅ How to Run the Tests
+```sh
+$ kvs set mykey myvalue
+```
 
-You can run the CLI tests using:
+- Stores `"myvalue"` under the key `"mykey"`.
 
-```bash
+### 2. Get a key
+
+```sh
+$ kvs get mykey
+myvalue
+```
+
+- Prints the value associated with `"mykey"`.
+- If the key does not exist, print `"Key not found"` and exit with status code `1`.
+
+### 3. Remove a key
+
+```sh
+$ kvs rm mykey
+```
+
+- Deletes the key-value pair.
+- If the key does not exist, print `"Key not found"` and exit with status code `1`.
+
+## 📦 Getting Started
+
+### Requirements
+
+- Rust (>= 1.70 recommended)
+
+### Build the CLI
+
+```sh
+cargo build --release
+```
+
+### Run it
+
+```sh
+cargo run -- set foo bar
+cargo run -- get foo
+cargo run -- rm foo
+```
+
+## ✅ Tests
+
+You can check your implementation with:
+
+```sh
 cargo test
 ```
----
 
-Ensure you have the following dependencies added in your Cargo.toml under [dev-dependencies]:
-
-```
-assert_cmd = "2.0"
-predicates = "3.0"
-```
-
-Your project structure should contain a test file like tests/cli.rs with all the test cases.
-
----
-
-## 🚀 Goal of This Challenge
-
-- Practice writing robust CLI tests
-- Learn to use assert_cmd and predicates effectively
-- Lay the foundation for future CLI and backend logic

@@ -1,54 +1,31 @@
-# Updated CLI Tests Challenge
+# Buffered I/O Wrappers Challenge
 
-**Challenge:** Upgrade the KvStore Test Suite for Persistence and Error Handling
+💡 Challenge: Implement Buffered I/O Wrappers with Position Tracking
 
-The current tests for the `KvStore` are written to check basic in-memory behavior.
-Your goal is to **refactor** these tests to ensure the key-value store is also
-persistent across restarts and returns appropriate `Result` types.
+Create two custom structs in Rust:
+- `BufReaderWithPos`
+- `BufWriterWithPos`
 
-### Tasks:
+Each should wrap `BufReader` and `BufWriter` respectively, while keeping track of the current seek position (`pos`) of the underlying reader or writer.
 
-1. **Use Temporary Storage**:
-   - Replace in-memory store creation (`KvStore::new()`) with persistent store creation using a temporary directory (`KvStore::open(temp_dir.path())?`).
-   - Use `TempDir` from the `tempfile` crate to create a temporary directory for each test.
+### Requirements:
+1. Both structs should be generic over any type that implements `Read + Seek` (for reader) or `Write + Seek` (for writer).
+2. Implement the `Read` and `Seek` traits for `BufReaderWithPos`.
+3. Implement the `Write`, `Flush`, and `Seek` traits for `BufWriterWithPos`.
+4. In each trait implementation, ensure the `pos` field is accurately updated after operations.
+5. Each struct should have a constructor (`new`) that initializes the wrapper and position correctly.
 
-2. **Handle Results Properly**:
-   - Update each test function signature to return `Result<()>`.
-   - Properly propagate errors using the `?` operator after each fallible method call (`set`, `get`, `remove`, `open`).
+💡 Hint: Use `SeekFrom::Current(0)` to get the initial position.
+💡 Use `BufReader` and `BufWriter` from `std::io`, and wrap the given reader/writer in them.
 
-3. **Add Recovery Verification**:
-   - After writing data to the store, `drop` the store and reopen it to ensure data is actually written to disk and can be recovered.
-
-4. **Add Test for Non-existent Key Removal**:
-   - Add a test that tries to remove a non-existent key and confirms it returns an error.
-
-### Original Tests to Refactor:
-
-- `get_stored_value`
-- `overwrite_value`
-- `get_non_existent_value`
-- `remove_key`
-
-### New Test to Add:
-
-- `remove_non_existent_key`
-
-### Example Hint:
-
-Here's how the beginning of your updated `get_stored_value` test might look:
-
+📁 File structure:
 ```rust
-#[test]
-fn get_stored_value() -> Result<()> {
-    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-    let mut store = KvStore::open(temp_dir.path())?;
+// log_io.rs
 
-    store.set("key1".to_owned(), "value1".to_owned())?;
-    ...
+use std::io::{self, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use crate::Result;
+
+// implement BufReaderWithPos and BufWriterWithPos here
 ```
 
-Use this pattern across all your tests.
-
-**Goal**: Ensure your `KvStore` implementation passes all updated tests, demonstrating correctness and durability.
-
-
+This challenge tests your ability to work with generics, traits, and low-level I/O abstractions in Rust. Good luck!

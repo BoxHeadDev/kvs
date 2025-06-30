@@ -1,36 +1,22 @@
-# Key-Value Open Challenge
+# Key-Value Cli Challenge
 
-## Challenge: Implement the `open` method for `KvStore`
+## Challenge: Connect `KvStore` to an Existing CLI Interface
 
-The `KvStore` persists key-value pairs in log files. When opening a store from disk,
-we must reconstruct the store's state by inspecting all past logs and preparing
-for future writes.
+This challenge builds upon an existing CLI definition using `clap` v2.
+Your task is to implement the logic that connects each CLI subcommand
+to the corresponding method on the `KvStore` type.
 
-### Background:
-- Each log file is named with a generation number (e.g., `1.log`, `2.log`).
-- The `KvStore` uses an in-memory index to map keys to their latest command position.
-- When opening the store, all `.log` files must be scanned in order to reconstruct
-  this index and prepare a writer for the next generation log file.
+### Given:
+- A CLI is already defined with subcommands: `set`, `get`, `rm`.
+- The `KvStore` API is available with:
+  - `KvStore::open(path: impl Into<PathBuf>) -> Result<KvStore>`
+  - `set(key: String, value: String) -> Result<()>`
+  - `get(key: String) -> Result<Option<String>>`
+  - `remove(key: String) -> Result<()>`
 
 ### Goals:
-Implement the `KvStore::open` function along with these helper functions:
-
-#### `log_path(dir: &Path, file_id: u64) -> PathBuf`
-- Returns the full path to the log file for a given generation number.
-
-#### `sorted_file_list(path: &Path) -> Result<Vec<u64>>`
-- Scans the directory for `.log` files,
-- Extracts and sorts their generation numbers,
-- Returns the sorted list.
-
-#### `new_log_file(...) -> Result<BufWriterWithPos<File>>`
-- Creates a new `.log` file for writing,
-- Adds its corresponding `BufReaderWithPos` to the `readers` map,
-- Returns a new `BufWriterWithPos` for writing new commands.
-
-#### `KvStore::open(path: impl Into<PathBuf>) -> Result<KvStore>`
-- Creates the directory if it doesn't exist,
-- Initializes the log readers and the writer,
-- Sets `current_file` to the next available generation number,
-- Returns a fully initialized `KvStore`.
+1. Open the store in the current directory using `KvStore::open(current_dir()?)`.
+2. For `set`, retrieve `KEY` and `VALUE` arguments and call `set()`.
+3. For `get`, retrieve `KEY`, call `get()`, and print the value or `Key not found`.
+4. For `rm`, retrieve `KEY`, call `remove()`, and if the key is missing, print `Key not found` and exit with code `1`.
 

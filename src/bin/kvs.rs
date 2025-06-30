@@ -1,16 +1,18 @@
+use clap::{Parser, Subcommand};
 use std::process::exit;
-use structopt::StructOpt;
 
 /// A simple key-value store
-#[derive(StructOpt, Debug)]
-#[structopt(name = "kvs")]
-pub struct Config {
-    /// Subcommand to run
-    #[structopt(subcommand)]
-    pub cmd: Command,
+#[derive(Parser, Debug)]
+#[command(name = env!("CARGO_PKG_NAME"))]
+#[command(author = env!("CARGO_PKG_AUTHORS"))]
+#[command(version = env!("CARGO_PKG_VERSION"))]
+#[command(about = env!("CARGO_PKG_DESCRIPTION"), long_about = None)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Command,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Subcommand, Debug)]
 pub enum Command {
     /// Set the value of a key
     Set { key: String, value: String },
@@ -21,9 +23,9 @@ pub enum Command {
 }
 
 fn main() {
-    let config = Config::from_args();
+    let cli = Cli::parse();
 
-    match config.cmd {
+    match cli.command {
         Command::Set { key, value } => {
             eprintln!("unimplemented");
             exit(1);

@@ -1,22 +1,16 @@
-# Key-Value Cli Challenge
+# Compaction Test Challenge
 
-## Challenge: Connect `KvStore` to an Existing CLI Interface
+Implement and verify a compaction mechanism in `KvStore` such that:
+- Repeatedly setting the same keys with new values eventually triggers compaction.
+- Compaction is defined as a measurable **decrease** in the total size of the data directory.
+- After compaction, reopening the store should yield correct values for all keys (latest written).
 
-This challenge builds upon an existing CLI definition using `clap` v2.
-Your task is to implement the logic that connects each CLI subcommand
-to the corresponding method on the `KvStore` type.
-
-### Given:
-- A CLI is already defined with subcommands: `set`, `get`, `rm`.
-- The `KvStore` API is available with:
-  - `KvStore::open(path: impl Into<PathBuf>) -> Result<KvStore>`
-  - `set(key: String, value: String) -> Result<()>`
-  - `get(key: String) -> Result<Option<String>>`
-  - `remove(key: String) -> Result<()>`
-
-### Goals:
-1. Open the store in the current directory using `KvStore::open(current_dir()?)`.
-2. For `set`, retrieve `KEY` and `VALUE` arguments and call `set()`.
-3. For `get`, retrieve `KEY`, call `get()`, and print the value or `Key not found`.
-4. For `rm`, retrieve `KEY`, call `remove()`, and if the key is missing, print `Key not found` and exit with code `1`.
+## Requirements:
+- Insert key-value pairs repeatedly with changing values.
+- Monitor the directory size after each iteration.
+- Detect when the directory size decreases, indicating compaction occurred.
+- After compaction is detected:
+    - Drop and reopen the store.
+    - Assert that all keys return the latest values.
+- If no compaction occurs after sufficient data insertion, the test must fail.
 

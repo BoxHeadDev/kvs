@@ -1,0 +1,9 @@
+[package]
+name = "tinykv"
+version = "0.1.0"
+authors = ["Chris Wren <chriswrendeveloper@gmail.com>"]
+description = "A key-value store"
+edition = "2024"
+
+[dependencies]
+

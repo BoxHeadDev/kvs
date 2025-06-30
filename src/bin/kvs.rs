@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use kvs::Result;
 use std::process::exit;
 
 /// A simple key-value store
@@ -22,7 +23,7 @@ pub enum Command {
     Rm { key: String },
 }
 
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
@@ -39,4 +40,5 @@ fn main() {
             exit(1);
         }
     }
+    Ok(())
 }

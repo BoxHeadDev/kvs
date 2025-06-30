@@ -1,64 +1,56 @@
-# Error Handling Challenge
+# Updated CLI Tests Challenge
 
-In this project it will be possible for the code to fail due to I/O errors. So
-before we get started implementing a database we need to do one more thing that
-is crucial to Rust projects: decide on an error handling strategy.
+Now that your `kvs` key-value store has a working CLI with real functionality, it's time to upgrade your test suite accordingly.
 
-<!-- TODO outline strategies? -->
+Your goal is to **replace stub-based tests** (which assume subcommands are "unimplemented") with **real integration tests** that validate the CLI's behavior end-to-end.
 
-Rust's error handling is powerful, but involves a lot of boilerplate to use
-correctly. For this project the [`failure`] crate will provide the tools to
-easily handle errors of all kinds.
+### ✅ Objectives
 
-[`failure`]: https://docs.rs/failure/0.1.5/failure/
+Update your existing CLI test suite to:
 
-The failure guide describes multiple error handling patterns.
+1. **Replace all tests expecting "unimplemented" messages** with tests that check:
+   - `kvs set <KEY> <VALUE>` stores a value with no output and a zero exit code
+   - `kvs get <KEY>` retrieves the correct value or prints `"Key not found"` if the key is missing
+   - `kvs rm <KEY>` removes a key silently, or prints `"Key not found"` if it doesn't exist
 
-[failure]: https://boats.gitlab.io/failure/
-[guidance]: https://boats.gitlab.io/failure/guidance.html
+2. **Use `tempfile::TempDir`** and `.current_dir()` to isolate each test’s database
+   - This ensures no shared state across tests
 
-Pick one of those strategies and, in your library, either define your own error
-type or import `failure`s `Error`. This is the error type you will use in all of
-your `Result`s, converting error types from other crates to your own with the
-`?` operator.
+3. **Add these new integration tests**:
+   - `cli_get_stored`: Set multiple keys using `KvStore` API and verify retrieval via CLI
+   - `cli_rm_stored`: Remove an existing key via CLI and verify it's gone
 
-After that, define a type alias for `Result` that includes your concrete error
-type, so that you don't need to type `Result<T, YourErrorType>` everywhere, but
-can simply type `Result<T>`. This is a common Rust pattern.
+4. **Ensure all existing CLI argument validation tests still pass**
 
-Finally, import those types into your executable with `use` statements, and
-change `main`s function signature to return `Result<()>`. All functions in your
-library that may fail will pass these `Results` back down the stack all the way
-to `main`, and then to the Rust runtime, which will print an error.
+### 🧰 Tools You’ll Need
 
-Run `cargo check` to look for compiler errors, then fix them. For now it's
-ok to end `main` with `panic!()` to make the project build.
+- `assert_cmd` — to run CLI commands and check exit codes and output
+- `predicates` — to assert against `stdout` or `stderr`
+- `tempfile` — to create isolated directories for testing
+- `kvs::KvStore` — to pre-populate your database where needed
 
-_Set up your error handling strategy before continuing._
+### 🧪 Example of the Updated Style
 
-As with the previous project, you'll want to create placeholder data structures
-and methods so that the tests compile. Now that you have defined an error type
-this should be straightforward. Add panics anywhere necessary to get the test
-suite to compile (`cargo test --no-run`).
+```rust
+#[test]
+fn cli_get_non_existent_key() {
+    let temp_dir = TempDir::new().unwrap();
+    Command::cargo_bin("kvs")
+        .unwrap()
+        .args(&["get", "key1"])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(predicates::str::contains("Key not found"));
+}
+```
 
+### 🏁 Completion Criteria
 
-<!--
-## Aside: The history of Rust error handling
--->
+- All your tests pass
+- No test uses `.stderr(contains("unimplemented"))`
+- New tests `cli_get_stored` and `cli_rm_stored` are present and correct
+- Each test uses an isolated directory via `TempDir`
 
-_Note: Error-handling practices in Rust are still evolving. This course
-currently uses the [`failure`] crate to make defining error types easier. While
-`failure` has a good design, its use is [arguably not a best practice][nbp]. It
-may not continue to be viewed favorably by Rust experts. Future iterations
-of the course will likely not use `failure`. In the meantime, it is fine, and
-presents an opportunity to learn more of the history and nuance of Rust error
-handling._
+Good luck! Refactoring tests is just as important as writing them—and this will give you confidence in your CLI's real-world behavior.
 
-[nbp]: https://github.com/rust-lang-nursery/rust-cookbook/issues/502#issue-387418261
-
-<!--
-Rust error handling has a long and winding history. Expert Rust programmers will
-be aware of it, as that history informs and explains modern Rust error handling.
-
-TODO
--->

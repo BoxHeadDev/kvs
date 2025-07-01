@@ -1,14 +1,27 @@
-# KVS-Server Logging Challenge
+# TCP Client Challenge
 
-## 🧠 Challenge: Logging for `kvs-server`
+## 📡 Challenge: Implement a TCP Client for `KvsServer`
 
-Production server applications tend to have robust and configurable logging. So
-now we're going to add logging to `kvs-server`, and as we continue will look
-for useful information to log. During development it is common to use logging
-at the `debug!` and `trace!` levels for "println debugging".
+Your goal is to implement the networking layer for a key-value store client that communicates with a `KvsServer` over TCP. This client will be responsible for connecting to the server and setting up buffered input/output streams.
 
-On startup log the server's version number. Also log the configuration. For now
-that means the IP address and port, and the name of the storage engine.
+### 🧩 Task
 
-Good luck!
+Implement a `KvsClient` struct that:
+
+- Maintains a buffered reader and writer for a TCP stream.
+- Provides a `connect` method to establish a connection to a given socket address.
+
+### 🛠 Requirements
+
+- Use `BufReader` and `BufWriter` from `std::io` for efficient I/O.
+- Use `TcpStream` from `std::net` to connect to the server.
+- Ensure the `connect` method supports any type that implements `ToSocketAddrs`.
+
+### 💡 Notes
+
+- `try_clone()` is used to create a second handle to the TCP stream so that both reading and writing can occur independently.
+- The `Result` type is assumed to be defined elsewhere in your project (typically a `Result<T, KvsError>` alias).
+- The `common` module should contain your protocol request and response types like `Request`, `SetResponse`, etc.
+
+Now go build your client-side logic!
 

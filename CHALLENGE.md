@@ -1,36 +1,44 @@
 #  Challenge
 
-## 🚀 Challenge: Build the Main Entry Point for `kvs-server`
+## 🚀 Challenge: Pluggable Storage Engines
 
-You're now ready to put everything together and launch the key-value store server with a production-ready `kvs-server.rs`.
+Your database has a storage engine, `KvStore`, implemented by you.
+Now you are going to add a second storage engine.
 
-This binary will:
-- Parse command-line arguments to configure the server (address and storage engine)
-- Log startup configuration and runtime errors
-- Open the key-value store engine
-- Run the TCP server to handle incoming requests
+There are multiple reasons to do so:
 
-## 🛠 Requirements
+- Different workloads require different performance characteristics. Some
+  storage engines may work better than other based on the workload.
 
-- Use `clap` to parse:
-  - `--addr` to specify the listening socket address (default: `127.0.0.1:4000`)
-  - `--engine` to optionally specify the storage engine (`kvs` or `sled`)
-- Use the `log` crate to emit `info`, `warn`, and `error` logs.
-- Initialize logging using `env_logger`.
-- Gracefully handle errors and exit with code 1 if the server fails to launch.
+- It creates a familiar framework for comparing different backends.
 
-## 🧩 Notes
+- It gives us an excuse to create and work with traits.
 
-- You’ll need the following dependencies in `Cargo.toml`:
-  ```toml
-  clap = { version = "4", features = ["derive"] }
-  log = "0.4"
-  env_logger = "0.10"
-  ```
-- The actual use of the `engine` argument is not implemented here — that would come later when supporting multiple engines like `sled`.
-- This starter setup always uses `KvStore`, and logs key events for visibility.
+- It gives us an excuse to write some comparative benchmarks!
 
-With this complete, running `cargo run --bin kvs-server` will launch your storage server, ready to accept client requests!
+So you are going to _extract_ a new trait, `KvsEngine`, from the `KvStore`
+interface. This is a classic _refactoring_, where existing code is transformed
+into a new form incrementally. When refactoring you will generally want to break
+the work up into the smallest changes that will continue to build and work.
 
-🧱 Get ready to deploy your server in style!
+Here is the API you need to end up with:
+
+- `trait KvsEngine` has `get`, `set` and `remove` methods with the same signatures
+  as `KvStore`.
+
+- `KvStore` implements `KvsEngine`, and no longer has `get`, `set` and `remove`
+  methods of its own.
+
+- There is a new implementation of `KvsEngine`, `SledKvsEngine`. You need to fill
+  its `get` and `set` methods using the `sled` library later.
+
+It's likely that you have already stubbed out the definitions for these if your
+tests are building. _Now is the time to fill them in._ Break down your
+refactoring into an intentional sequence of changes, and make sure the project
+continues to build and pass previously-passing tests before continuing.
+
+As one final step, you need to consider what happens when `kvs-server` is
+started with one engine, is killed, then restarted with a different engine. This
+case can only result in an error, and you need to figure out how to detect the
+case to report the error. The test `cli_wrong_engine` reflects this scenario.
 

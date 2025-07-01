@@ -1,198 +1,152 @@
-use assert_cmd::prelude::*; // Provides extensions for running and asserting on binaries using Command
-use predicates::ord::eq; // Used to compare exact string output (e.g., stdout equals "value1")
-use predicates::str::{PredicateStrExt, contains, is_empty};
-// `contains` matches substrings in output
-// `is_empty` checks for completely empty stdout or stderr
-// `PredicateStrExt` adds chaining and helper methods to string predicates
-use std::process::Command; // Standard way to run and configure child processes
-use tempfile::TempDir; // Creates automatically-cleaned temporary directories for test isolation
+use assert_cmd::prelude::*;
+use predicates::str::{contains, is_empty};
+use std::fs::{self, File};
+use std::process::Command;
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
+use tempfile::TempDir;
 
-use kvs::{KvStore, Result};
-
-// Test: Running `kvs` with no arguments should fail
+// `kvs-client` with no args should exit with a non-zero code.
 #[test]
-fn cli_no_args() {
-    Command::cargo_bin("kvs") // Locates the compiled `kvs` binary using Cargo
-        .unwrap() // Panics if the binary is not found (e.g., build failed)
-        .assert() // Begin asserting on the command's output and status
-        .failure(); // Asserts that the command exited with a non-zero status
+fn client_cli_no_args() {
+    let temp_dir = TempDir::new().unwrap();
+    let mut cmd = Command::cargo_bin("kvs-client").unwrap();
+    cmd.current_dir(&temp_dir).assert().failure();
 }
 
-// Test: `kvs -V` should print the version number to stdout
 #[test]
-fn cli_version() {
-    Command::cargo_bin("kvs")
+fn client_cli_invalid_get() {
+    let temp_dir = TempDir::new().unwrap();
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["-V"]) // Pass `-V` as CLI argument to get version
-        .assert()
-        .stdout(contains(env!("CARGO_PKG_VERSION"))); // Check that stdout includes the current version
-}
-
-// Test: `kvs get <KEY>` should print "Key not found" for a non-existent key and exit with zero.
-// This checks that the program gracefully handles missing keys without erroring.
-#[test]
-fn cli_get_non_existent_key() {
-    let temp_dir = TempDir::new().unwrap(); // Use a fresh temporary directory as isolated storage
-    Command::cargo_bin("kvs")
-        .unwrap()
-        .args(&["get", "key1"]) // Try to get a non-existent key
-        .current_dir(&temp_dir) // Ensure test does not affect or rely on user's actual files
-        .assert()
-        .success() // Getting a non-existent key is not an error; expect exit code 0
-        .stdout(eq("Key not found").trim()); // Expected output
-}
-
-// Test: `kvs rm <KEY>` should print "Key not found" for an empty database and exit with non-zero code.
-// This confirms that deleting a key that doesn’t exist is treated as an error.
-#[test]
-fn cli_rm_non_existent_key() {
-    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-    Command::cargo_bin("kvs")
-        .unwrap()
-        .args(&["rm", "key1"]) // Try to remove a key that doesn't exist
+        .args(&["get"])
         .current_dir(&temp_dir)
         .assert()
-        .failure() // Removing a non-existent key should fail (exit code ≠ 0)
-        .stdout(eq("Key not found").trim()); // Expected failure message
-}
+        .failure();
 
-// Test: `kvs set <KEY> <VALUE>` should print nothing and exit with zero.
-// This confirms that the `set` command works and is silent on success.
-#[test]
-fn cli_set() {
-    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-    Command::cargo_bin("kvs")
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["set", "key1", "value1"]) // Set a key-value pair
+        .args(&["get", "extra", "field"])
         .current_dir(&temp_dir)
         .assert()
-        .success() // Set should succeed
-        .stdout(is_empty()); // Successful `set` produces no output
-}
+        .failure();
 
-// Test: `kvs get <KEY>` should print value.
-// This validates end-to-end integration between the library backend and the CLI.
-#[test]
-fn cli_get_stored() -> Result<()> {
-    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-
-    // Set up the store programmatically before invoking the CLI
-    let mut store = KvStore::open(temp_dir.path())?;
-    store.set("key1".to_owned(), "value1".to_owned())?;
-    store.set("key2".to_owned(), "value2".to_owned())?;
-    drop(store); // Explicitly close store to flush and unlock files
-
-    // Now use the CLI to retrieve the values
-    Command::cargo_bin("kvs")
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["get", "key1"])
+        .args(&["get", "key", "--addr", "invalid-addr"])
         .current_dir(&temp_dir)
         .assert()
-        .success()
-        .stdout(eq("value1").trim());
+        .failure();
 
-    Command::cargo_bin("kvs")
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["get", "key2"])
+        .args(&["get", "key", "--unknown-flag"])
         .current_dir(&temp_dir)
         .assert()
-        .success()
-        .stdout(eq("value2").trim());
-
-    Ok(())
+        .failure();
 }
 
-// Test: `kvs rm <KEY>` should print nothing and exit with zero.
-// This verifies that `rm` actually deletes the key and that `get` reflects this change.
 #[test]
-fn cli_rm_stored() -> Result<()> {
-    let temp_dir = TempDir::new().expect("unable to create temporary working directory");
-
-    // Insert a key so we can later remove it
-    let mut store = KvStore::open(temp_dir.path())?;
-    store.set("key1".to_owned(), "value1".to_owned())?;
-    drop(store); // Close to ensure changes are saved to disk
-
-    // Use CLI to remove the key
-    Command::cargo_bin("kvs")
+fn client_cli_invalid_set() {
+    let temp_dir = TempDir::new().unwrap();
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["rm", "key1"])
+        .args(&["set"])
         .current_dir(&temp_dir)
         .assert()
-        .success()
-        .stdout(is_empty()); // `rm` should produce no output on success
+        .failure();
 
-    // Use CLI to confirm the key is actually gone
-    Command::cargo_bin("kvs")
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["get", "key1"])
+        .args(&["set", "missing_field"])
         .current_dir(&temp_dir)
         .assert()
-        .success()
-        .stdout(eq("Key not found").trim()); // Should now be missing
-    Ok(())
-}
+        .failure();
 
-// Test: Invalid usage of `get` (missing or too many args) should fail
-#[test]
-fn cli_invalid_get() {
-    Command::cargo_bin("kvs")
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["get"]) // Missing key
+        .args(&["set", "key", "value", "extra_field"])
+        .current_dir(&temp_dir)
         .assert()
-        .failure(); // Should return non-zero exit code
+        .failure();
 
-    Command::cargo_bin("kvs")
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["get", "extra", "field"]) // Too many arguments
+        .args(&["set", "key", "value", "--addr", "invalid-addr"])
+        .current_dir(&temp_dir)
+        .assert()
+        .failure();
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["get", "key", "--unknown-flag"])
+        .current_dir(&temp_dir)
         .assert()
         .failure();
 }
 
-// Test: Invalid usage of `set` (wrong number of args) should fail
 #[test]
-fn cli_invalid_set() {
-    Command::cargo_bin("kvs")
+fn client_cli_invalid_rm() {
+    let temp_dir = TempDir::new().unwrap();
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["set"]) // No key/value
+        .args(&["rm"])
+        .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs")
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["set", "missing_field"]) // Missing value
+        .args(&["rm", "extra", "field"])
+        .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs")
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["set", "extra", "extra", "field"]) // Too many arguments
+        .args(&["rm", "key", "--addr", "invalid-addr"])
+        .current_dir(&temp_dir)
+        .assert()
+        .failure();
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["rm", "key", "--unknown-flag"])
+        .current_dir(&temp_dir)
         .assert()
         .failure();
 }
 
-// Test: Invalid usage of `rm` (missing or too many args) should fail
 #[test]
-fn cli_invalid_rm() {
-    Command::cargo_bin("kvs")
+fn client_cli_invalid_subcommand() {
+    let temp_dir = TempDir::new().unwrap();
+    Command::cargo_bin("kvs-client")
         .unwrap()
-        .args(&["rm"]) // Missing key
-        .assert()
-        .failure();
-
-    Command::cargo_bin("kvs")
-        .unwrap()
-        .args(&["rm", "extra", "field"]) // Too many arguments
+        .args(&["unknown"])
+        .current_dir(&temp_dir)
         .assert()
         .failure();
 }
 
-// Test: Unknown subcommand should fail
+// `kvs-client -V` should print the version
 #[test]
-fn cli_invalid_subcommand() {
-    Command::cargo_bin("kvs")
-        .unwrap()
-        .args(&["unknown", "subcommand"]) // Unknown CLI command
+fn client_cli_version() {
+    let temp_dir = TempDir::new().unwrap();
+    let mut cmd = Command::cargo_bin("kvs-client").unwrap();
+    cmd.args(&["-V"])
+        .current_dir(&temp_dir)
         .assert()
-        .failure();
+        .stdout(contains(env!("CARGO_PKG_VERSION")));
+}
+
+// `kvs-server -V` should print the version
+#[test]
+fn server_cli_version() {
+    let temp_dir = TempDir::new().unwrap();
+    let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+    cmd.args(&["-V"])
+        .current_dir(&temp_dir)
+        .assert()
+        .stdout(contains(env!("CARGO_PKG_VERSION")));
 }

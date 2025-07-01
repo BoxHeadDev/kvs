@@ -27,8 +27,8 @@ pub enum Command {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let mut store = KvStore::open(current_dir()?)?;
-
+    let mut store = KvStore::open(current_dir()?)?
+    
     match cli.command {
         Command::Set { key, value } => {
             store.set(key.to_string(), value.to_string())?;

@@ -1,12 +1,14 @@
 #![deny(missing_docs)]
 //! A simple key/value store.
 
+pub use client::KvsClient;
 pub use command::Command;
 pub use error::{KvsError, Result};
 pub use index::CommandPos;
 pub use kv::KvStore;
 pub use log_io::{BufReaderWithPos, BufWriterWithPos};
 
+mod client;
 mod command;
 mod error;
 mod index;

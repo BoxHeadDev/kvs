@@ -1,4 +1,5 @@
 use clap::{Parser, ValueEnum};
+use log::{LevelFilter, error, info, warn};
 use std::net::SocketAddr;
 
 const DEFAULT_LISTENING_ADDRESS: &str = "127.0.0.1:4000";
@@ -24,5 +25,6 @@ enum Engine {
 }
 
 fn main() {
+    env_logger::builder().filter_level(LevelFilter::Info).init();
     let mut opt = Opt::parse();
 }

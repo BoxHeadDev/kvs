@@ -1,26 +1,36 @@
-# Client RPC Challenge
+# Server RPC Challenge
 
-## 🔌 Challenge: Implement Full Client-Side RPC for `KvsClient`
+## 🧠 Challenge: Handle Requests and Send Responses in `KvsServer`
 
-You’ve previously defined the `Request` and `Response` types for the key-value store protocol. Now it’s time to integrate them into the `KvsClient` to implement full client-side remote procedure calls using `serde_json`.
+You’ve already set up your request/response types and built the networking skeleton for your key-value store server. Now it’s time to complete the server logic to:
+
+- Accept and deserialize incoming client requests (`Get`, `Set`, `Remove`)
+- Call the appropriate methods on the `KvStore` engine
+- Serialize and return the appropriate response types
 
 ## 🎯 Your Task
 
-Update the `KvsClient` to:
+Update the `KvsServer` implementation to:
 
-- Serialize `Request` enums and send them over the TCP stream.
-- Deserialize the appropriate response (`GetResponse`, `SetResponse`, or `RemoveResponse`) from the server.
-- Use a `serde_json::Deserializer` with a buffered reader to efficiently parse incoming JSON data.
+- Deserialize `Request` values from the TCP stream using `serde_json::Deserializer`
+- Match each `Request` variant and invoke the corresponding method on the `KvStore`
+- Serialize and send the correct response type (`GetResponse`, `SetResponse`, `RemoveResponse`) back to the client
+- Log each request and response using the `log` crate
 
-## 🔧 Notes
+## 🧩 Notes
 
-- Make sure you’ve included `serde` and `serde_json` in your `Cargo.toml`:
-  ```toml
-  serde = { version = "1", features = ["derive"] }
-  serde_json = "1"
+- `KvStore` is assumed to implement `get`, `set`, and `remove` methods returning your project’s `Result` type.
+- Use `serde_json::Deserializer` with `into_iter::<Request>()` to stream multiple requests over a single connection.
+- Don’t forget to initialize the logger in your `main.rs`:
+  ```rust
+  env_logger::init();
   ```
-- You’ll need to handle flushing the writer after each request to ensure the data is sent immediately.
-- The deserializer allows you to efficiently stream multiple JSON values from a single connection.
+- You’ll need to add dependencies in your `Cargo.toml`:
+  ```toml
+  serde_json = "1"
+  log = "0.4"
+  env_logger = "0.10"
+  ```
 
-With this complete, your client can now send requests and handle responses in a structured, type-safe way. Power up your KVS!
+Build your server to process real client requests — one line of JSON at a time!
 

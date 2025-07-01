@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
-use kvs::{KvStore, KvsError, Result};
-use std::env::current_dir;
-use std::process::exit;
+use kvs::{KvStore, Result};
+use std::net::SocketAddr;
+use std::process;
 
 /// A simple key-value store
 #[derive(Parser, Debug)]
@@ -15,36 +15,65 @@ pub struct Cli {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum Command {
-    /// Set the value of a key
-    Set { key: String, value: String },
-    /// Get the value of a key
-    Get { key: String },
-    /// Remove a key
-    Rm { key: String },
+enum Command {
+    /// Get the string value of a given string key
+    Get {
+        /// A string key
+        key: String,
+
+        /// Server address
+        #[arg(long, default_value = DEFAULT_LISTENING_ADDRESS)]
+        addr: SocketAddr,
+    },
+    /// Set the value of a string key to a string
+    Set {
+        /// A string key
+        key: String,
+
+        /// The string value of the key
+        value: String,
+
+        /// Server address
+        #[arg(long, default_value = DEFAULT_LISTENING_ADDRESS)]
+        addr: SocketAddr,
+    },
+    /// Remove a given string key
+    Rm {
+        /// A string key
+        key: String,
+
+        /// Server address
+        #[arg(long, default_value = DEFAULT_LISTENING_ADDRESS)]
+        addr: SocketAddr,
+    },
 }
 
-fn main() -> Result<()> {
-    let cli = Cli::parse();
+fn main() {
+    let opt = Opt::parse();
 
-    let mut store = KvStore::open(current_dir()?)?
-    
-    match cli.command {
-        Command::Set { key, value } => {
-            store.set(key.to_string(), value.to_string())?;
-        }
-        Command::Get { key } => match store.get(key)? {
-            Some(value) => println!("{}", value),
-            None => println!("Key not found"),
-        },
-        Command::Rm { key } => match store.remove(key) {
-            Ok(()) => {}
-            Err(KvsError::KeyNotFound) => {
-                println!("Key not found");
-                exit(1);
+    if let Err(e) = run(opt) {
+        eprintln!("{}", e);
+        process::exit(1);
+    }
+}
+
+fn run(opt: Opt) -> Result<()> {
+    match opt.command {
+        Command::Get { key, addr } => {
+            let mut client = KvsClient::connect(addr)?;
+            match client.get(key)? {
+                Some(value) => println!("{}", value),
+                None => println!("Key not found"),
             }
-            Err(e) => return Err(e),
-        },
+        }
+        Command::Set { key, value, addr } => {
+            let mut client = KvsClient::connect(addr)?;
+            client.set(key, value)?;
+        }
+        Command::Rm { key, addr } => {
+            let mut client = KvsClient::connect(addr)?;
+            client.remove(key)?;
+        }
     }
     Ok(())
 }

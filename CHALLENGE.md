@@ -1,36 +1,23 @@
-# Server RPC Challenge
+#  Challenge
 
-## 🧠 Challenge: Handle Requests and Send Responses in `KvsServer`
+## 🧪 Challenge: Build a Full CLI Interface for `kvs-client`
 
-You’ve already set up your request/response types and built the networking skeleton for your key-value store server. Now it’s time to complete the server logic to:
+In this challenge, you’ll design and implement a full-featured command-line interface for the `kvs-client` binary using the `clap` crate.
 
-- Accept and deserialize incoming client requests (`Get`, `Set`, `Remove`)
-- Call the appropriate methods on the `KvStore` engine
-- Serialize and return the appropriate response types
+Your CLI should support three subcommands (`get`, `set`, and `rm`) to interact with the key-value store server. Each subcommand should send the appropriate request to the server over TCP and handle the response accordingly.
 
-## 🎯 Your Task
+## 🛠 Requirements
 
-Update the `KvsServer` implementation to:
+- Use `clap::Parser` and `Subcommand` to define the structure of the CLI.
+- Use `DEFAULT_LISTENING_ADDRESS` (`127.0.0.1:4000`) as the default server address.
+- Handle all errors gracefully by printing to stderr and exiting with status code 1.
+- Connect to the server using `KvsClient`, send the request, and print the result.
 
-- Deserialize `Request` values from the TCP stream using `serde_json::Deserializer`
-- Match each `Request` variant and invoke the corresponding method on the `KvStore`
-- Serialize and send the correct response type (`GetResponse`, `SetResponse`, `RemoveResponse`) back to the client
-- Log each request and response using the `log` crate
+## 🧩 Tips
 
-## 🧩 Notes
+- Add `clap = { version = "4", features = ["derive"] }` to your `Cargo.toml`.
+- Make sure to replace `Opt` with `Cli` or vice versa as needed for consistency.
+- You can use `env!("CARGO_PKG_*")` variables to automatically fill in CLI metadata from `Cargo.toml`.
 
-- `KvStore` is assumed to implement `get`, `set`, and `remove` methods returning your project’s `Result` type.
-- Use `serde_json::Deserializer` with `into_iter::<Request>()` to stream multiple requests over a single connection.
-- Don’t forget to initialize the logger in your `main.rs`:
-  ```rust
-  env_logger::init();
-  ```
-- You’ll need to add dependencies in your `Cargo.toml`:
-  ```toml
-  serde_json = "1"
-  log = "0.4"
-  env_logger = "0.10"
-  ```
-
-Build your server to process real client requests — one line of JSON at a time!
+This will give you a fully functional client CLI that can read input, talk to the server, and display results. Ready to wire it up? 🔌
 

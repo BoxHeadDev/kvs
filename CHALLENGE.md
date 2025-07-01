@@ -1,44 +1,27 @@
-# Compaction Challenge
+# KVS-Server CLI Challenge
 
-## 🧠 CHALLENGE: Implement Log Compaction in `KvStore`
+## 🧠 Challenge: Command-Line Parsing for `kvs-server`
 
-## GOAL:
-Add a log compaction mechanism to the KvStore to prevent the log files from growing indefinitely.
-Compaction should remove obsolete commands and consolidate the latest key-value pairs into a new log file.
+Your task is to implement command-line argument parsing for a key-value store server application called `kvs-server`.
 
-## STEP-BY-STEP GUIDE:
+Use the [`clap`](https://docs.rs/clap/latest/clap/) crate to define a `Parser` that supports the following:
 
-1. Add a new field to `KvStore`:
-   - `uncompacted: u64` to track how many bytes can be reclaimed via compaction.
+- A required `--addr` option (with default `127.0.0.1:4000`) to specify the IP and port the server should bind to.
+- An optional `--engine` option that determines which storage engine to use (`kvs` or `sled`). If the option is not provided, no engine is selected by default.
 
-2. Update the `load` function to return the number of bytes considered "uncompacted".
-   - This includes any overwritten or deleted commands while reconstructing the index.
+Additionally:
+- Define a `SocketAddr` for the `addr` field.
+- Use a `ValueEnum` enum named `Engine` to represent the supported engine types.
 
-3. Modify `KvStore::open`:
-   - Accumulate the returned uncompacted bytes during log replay.
-   - Store the total in the `uncompacted` field.
+**Note:** You’ll need to define `DEFAULT_LISTENING_ADDRESS` as a constant (`"127.0.0.1:4000"`) if not already present.
 
-4. Modify `set` and `remove` methods:
-   - Whenever an old command is overwritten or a key is deleted, increment `uncompacted`.
-   - If `uncompacted > COMPACTION_THRESHOLD` (e.g., 1MB), trigger `self.compact()?`.
+### 🔧 Hints
 
-5. Implement `KvStore::compact`:
-   - Write all live entries (from `self.index`) to a new compaction log file.
-   - Update all `CommandPos` entries to point to the new file/positions.
-   - Delete older log files (`file_id < compaction_file_id`).
-   - Reset `uncompacted = 0`.
+- You can add the `clap` crate to your dependencies in `Cargo.toml`:
+  ```toml
+  clap = { version = "4", features = ["derive"] }
+  ```
+- Make sure your enum derives `ValueEnum` and the appropriate traits for it to work with `clap`.
 
-6. Add a helper method `new_log_file` on `KvStore`:
-   - It wraps the global `new_log_file(...)` and updates `self.readers`.
-
-7. Add `COMPACTION_THRESHOLD` constant:
-   ```rust
-   const COMPACTION_THRESHOLD: u64 = 1024 * 1024; // 1MB
-   ```
-
-## BONUS:
-- Write a test to confirm that old log files are deleted after compaction.
-- Ensure `set`/`get`/`remove` still work correctly post-compaction.
-
-🏁 Once complete, your `KvStore` will support efficient, space-reclaiming log compaction!
+Good luck!
 

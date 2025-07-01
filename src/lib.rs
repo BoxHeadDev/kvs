@@ -11,6 +11,7 @@ pub use server::KvServer;
 
 mod client;
 mod command;
+mod common;
 mod error;
 mod index;
 mod kv;

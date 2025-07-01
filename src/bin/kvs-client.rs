@@ -1,7 +1,10 @@
 use clap::{Parser, Subcommand};
-use kvs::{KvStore, Result};
+use kvs::{KvsClient, Result};
 use std::net::SocketAddr;
 use std::process;
+
+const DEFAULT_LISTENING_ADDRESS: &str = "127.0.0.1:4000";
+const ADDRESS_FORMAT: &str = "IP:PORT";
 
 /// A simple key-value store
 #[derive(Parser, Debug)]
@@ -9,9 +12,9 @@ use std::process;
 #[command(author = env!("CARGO_PKG_AUTHORS"))]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(about = env!("CARGO_PKG_DESCRIPTION"), long_about = None)]
-pub struct Cli {
+struct Cli {
     #[command(subcommand)]
-    pub command: Command,
+    command: Command,
 }
 
 #[derive(Subcommand, Debug)]
@@ -22,7 +25,7 @@ enum Command {
         key: String,
 
         /// Server address
-        #[arg(long, default_value = DEFAULT_LISTENING_ADDRESS)]
+        #[arg(long, value_name = ADDRESS_FORMAT, default_value = DEFAULT_LISTENING_ADDRESS)]
         addr: SocketAddr,
     },
     /// Set the value of a string key to a string
@@ -34,7 +37,7 @@ enum Command {
         value: String,
 
         /// Server address
-        #[arg(long, default_value = DEFAULT_LISTENING_ADDRESS)]
+        #[arg(long, value_name = ADDRESS_FORMAT, default_value = DEFAULT_LISTENING_ADDRESS)]
         addr: SocketAddr,
     },
     /// Remove a given string key
@@ -43,22 +46,22 @@ enum Command {
         key: String,
 
         /// Server address
-        #[arg(long, default_value = DEFAULT_LISTENING_ADDRESS)]
+        #[arg(long, value_name = ADDRESS_FORMAT, default_value = DEFAULT_LISTENING_ADDRESS)]
         addr: SocketAddr,
     },
 }
 
 fn main() {
-    let opt = Opt::parse();
+    let cli = Cli::parse();
 
-    if let Err(e) = run(opt) {
+    if let Err(e) = run(cli) {
         eprintln!("{}", e);
         process::exit(1);
     }
 }
 
-fn run(opt: Opt) -> Result<()> {
-    match opt.command {
+fn run(cli: Cli) -> Result<()> {
+    match cli.command {
         Command::Get { key, addr } => {
             let mut client = KvsClient::connect(addr)?;
             match client.get(key)? {

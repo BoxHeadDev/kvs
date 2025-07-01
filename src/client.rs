@@ -1,5 +1,5 @@
-use crate::Result;
 use crate::common::{GetResponse, RemoveResponse, Request, SetResponse};
+use crate::{KvsError, Result};
 use serde::Deserialize;
 use serde_json::de::{Deserializer, IoRead};
 use std::io::{BufReader, BufWriter, Write};
@@ -28,7 +28,7 @@ impl KvsClient {
         let resp = GetResponse::deserialize(&mut self.reader)?;
         match resp {
             GetResponse::Ok(value) => Ok(value),
-            GetResponse::Err(msg) => Err(msg),
+            GetResponse::Err(msg) => Err(KvsError::StringError(msg)),
         }
     }
 
@@ -39,7 +39,7 @@ impl KvsClient {
         let resp = SetResponse::deserialize(&mut self.reader)?;
         match resp {
             SetResponse::Ok(_) => Ok(()),
-            SetResponse::Err(msg) => Err(msg),
+            SetResponse::Err(msg) => Err(KvsError::StringError(msg)),
         }
     }
 
@@ -50,7 +50,7 @@ impl KvsClient {
         let resp = RemoveResponse::deserialize(&mut self.reader)?;
         match resp {
             RemoveResponse::Ok(_) => Ok(()),
-            RemoveResponse::Err(msg) => Err(msg),
+            RemoveResponse::Err(msg) => Err(KvsError::StringError(msg)),
         }
     }
 }

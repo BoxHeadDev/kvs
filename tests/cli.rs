@@ -170,3 +170,168 @@ fn cli_log_configuration() {
     assert!(content.contains("kvs"));
     assert!(content.contains("127.0.0.1:4001"));
 }
+
+#[test]
+fn cli_wrong_engine() {
+    // sled first, kvs second
+    {
+        let temp_dir = TempDir::new().unwrap();
+        let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+        let mut child = cmd
+            .args(&["--engine", "sled", "--addr", "127.0.0.1:4002"])
+            .current_dir(&temp_dir)
+            .spawn()
+            .unwrap();
+        thread::sleep(Duration::from_secs(1));
+        child.kill().expect("server exited before killed");
+
+        let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+        cmd.args(&["--engine", "kvs", "--addr", "127.0.0.1:4003"])
+            .current_dir(&temp_dir)
+            .assert()
+            .failure();
+    }
+
+    // kvs first, sled second
+    {
+        let temp_dir = TempDir::new().unwrap();
+        let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+        let mut child = cmd
+            .args(&["--engine", "kvs", "--addr", "127.0.0.1:4002"])
+            .current_dir(&temp_dir)
+            .spawn()
+            .unwrap();
+        thread::sleep(Duration::from_secs(1));
+        child.kill().expect("server exited before killed");
+
+        let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+        cmd.args(&["--engine", "sled", "--addr", "127.0.0.1:4003"])
+            .current_dir(&temp_dir)
+            .assert()
+            .failure();
+    }
+}
+
+fn cli_access_server(engine: &str, addr: &str) {
+    let (sender, receiver) = mpsc::sync_channel(0);
+    let temp_dir = TempDir::new().unwrap();
+    let mut server = Command::cargo_bin("kvs-server").unwrap();
+    let mut child = server
+        .args(&["--engine", engine, "--addr", addr])
+        .current_dir(&temp_dir)
+        .spawn()
+        .unwrap();
+    let handle = thread::spawn(move || {
+        let _ = receiver.recv(); // wait for main thread to finish
+        child.kill().expect("server exited before killed");
+    });
+    thread::sleep(Duration::from_secs(1));
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["set", "key1", "value1", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(is_empty());
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["get", "key1", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout("value1\n");
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["set", "key1", "value2", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(is_empty());
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["get", "key1", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout("value2\n");
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["get", "key2", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(contains("Key not found"));
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["rm", "key2", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .failure()
+        .stderr(contains("Key not found"));
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["set", "key2", "value3", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(is_empty());
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["rm", "key1", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(is_empty());
+
+    sender.send(()).unwrap();
+    handle.join().unwrap();
+
+    // Reopen and check value
+    let (sender, receiver) = mpsc::sync_channel(0);
+    let mut server = Command::cargo_bin("kvs-server").unwrap();
+    let mut child = server
+        .args(&["--engine", engine, "--addr", addr])
+        .current_dir(&temp_dir)
+        .spawn()
+        .unwrap();
+    let handle = thread::spawn(move || {
+        let _ = receiver.recv(); // wait for main thread to finish
+        child.kill().expect("server exited before killed");
+    });
+    thread::sleep(Duration::from_secs(1));
+
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["get", "key2", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(contains("value3"));
+    Command::cargo_bin("kvs-client")
+        .unwrap()
+        .args(&["get", "key1", "--addr", addr])
+        .current_dir(&temp_dir)
+        .assert()
+        .success()
+        .stdout(contains("Key not found"));
+    sender.send(()).unwrap();
+    handle.join().unwrap();
+}
+
+#[test]
+fn cli_access_server_kvs_engine() {
+    cli_access_server("kvs", "127.0.0.1:4004");
+}
+
+#[test]
+fn cli_access_server_sled_engine() {
+    cli_access_server("sled", "127.0.0.1:4005");
+}

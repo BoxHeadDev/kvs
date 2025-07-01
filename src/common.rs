@@ -1,5 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Response {
+    Get(GetResponse),
+    Set(SetResponse),
+    Remove(RemoveResponse),
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Request {
     Get { key: String },

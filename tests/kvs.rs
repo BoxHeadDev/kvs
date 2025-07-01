@@ -1,10 +1,8 @@
-use kvs::{KvStore, Result};
+use kvs::{KvStore, KvsEngine, Result};
 use tempfile::TempDir;
 use walkdir::WalkDir;
 
-//
-// Test 1: Should get previously stored value
-//
+// Should get previously stored value
 #[test]
 fn get_stored_value() -> Result<()> {
     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
@@ -16,7 +14,7 @@ fn get_stored_value() -> Result<()> {
     assert_eq!(store.get("key1".to_owned())?, Some("value1".to_owned()));
     assert_eq!(store.get("key2".to_owned())?, Some("value2".to_owned()));
 
-    // Open from disk again and check persistent data.
+    // Open from disk again and check persistent data
     drop(store);
     let mut store = KvStore::open(temp_dir.path())?;
     assert_eq!(store.get("key1".to_owned())?, Some("value1".to_owned()));
@@ -25,9 +23,7 @@ fn get_stored_value() -> Result<()> {
     Ok(())
 }
 
-//
-// Test 2: Should overwrite existent value
-//
+// Should overwrite existent value
 #[test]
 fn overwrite_value() -> Result<()> {
     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
@@ -38,7 +34,7 @@ fn overwrite_value() -> Result<()> {
     store.set("key1".to_owned(), "value2".to_owned())?;
     assert_eq!(store.get("key1".to_owned())?, Some("value2".to_owned()));
 
-    // Open from disk again and check persistent data.
+    // Open from disk again and check persistent data
     drop(store);
     let mut store = KvStore::open(temp_dir.path())?;
     assert_eq!(store.get("key1".to_owned())?, Some("value2".to_owned()));
@@ -48,9 +44,7 @@ fn overwrite_value() -> Result<()> {
     Ok(())
 }
 
-//
-// Test 3: Should get `None` when getting a non-existent key
-//
+// Should get `None` when getting a non-existent key
 #[test]
 fn get_non_existent_value() -> Result<()> {
     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
@@ -59,7 +53,7 @@ fn get_non_existent_value() -> Result<()> {
     store.set("key1".to_owned(), "value1".to_owned())?;
     assert_eq!(store.get("key2".to_owned())?, None);
 
-    // Open from disk again and check persistent data.
+    // Open from disk again and check persistent data
     drop(store);
     let mut store = KvStore::open(temp_dir.path())?;
     assert_eq!(store.get("key2".to_owned())?, None);
@@ -67,9 +61,6 @@ fn get_non_existent_value() -> Result<()> {
     Ok(())
 }
 
-//
-// Test 4:
-//
 #[test]
 fn remove_non_existent_key() -> Result<()> {
     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
@@ -78,9 +69,6 @@ fn remove_non_existent_key() -> Result<()> {
     Ok(())
 }
 
-//
-// Test 5: Should remove a key
-//
 #[test]
 fn remove_key() -> Result<()> {
     let temp_dir = TempDir::new().expect("unable to create temporary working directory");
@@ -122,10 +110,10 @@ fn compaction() -> Result<()> {
             current_size = new_size;
             continue;
         }
-        // Compaction triggered.
+        // Compaction triggered
 
         drop(store);
-        // reopen and check content.
+        // reopen and check content
         let mut store = KvStore::open(temp_dir.path())?;
         for key_id in 0..1000 {
             let key = format!("key{}", key_id);

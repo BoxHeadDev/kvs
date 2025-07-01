@@ -2,18 +2,12 @@
 //! A simple key/value store.
 
 pub use client::KvsClient;
-pub use command::Command;
+pub use engines::{KvStore, KvsEngine, SledKvsEngine};
 pub use error::{KvsError, Result};
-pub use index::CommandPos;
-pub use kv::KvStore;
-pub use log_io::{BufReaderWithPos, BufWriterWithPos};
-pub use server::KvServer;
+pub use server::KvsServer;
 
 mod client;
-mod command;
 mod common;
+mod engines;
 mod error;
-mod index;
-mod kv;
-mod log_io;
 mod server;

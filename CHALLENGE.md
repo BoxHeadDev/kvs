@@ -1,25 +1,26 @@
-# Request/Response Types Challenge
+# Client RPC Challenge
 
-## 🔄 Challenge: Define Request and Response Types for KVS Protocol
+## 🔌 Challenge: Implement Full Client-Side RPC for `KvsClient`
 
-In this challenge, you'll define the core request and response types used in communication between the key-value store client and server. These types will be serialized and deserialized using `serde` to support structured data transfer over the network.
+You’ve previously defined the `Request` and `Response` types for the key-value store protocol. Now it’s time to integrate them into the `KvsClient` to implement full client-side remote procedure calls using `serde_json`.
 
-## 🛠 Requirements
+## 🎯 Your Task
 
-- Use `serde::{Serialize, Deserialize}` to enable serialization of all types.
-- Define a `Request` enum that represents client operations (`Get`, `Set`, and `Remove`) with associated data.
-- Define three response enums:
-  - `GetResponse`: wraps either a value or an error message.
-  - `SetResponse`: wraps a unit result or an error message.
-  - `RemoveResponse`: wraps a unit result or an error message.
+Update the `KvsClient` to:
+
+- Serialize `Request` enums and send them over the TCP stream.
+- Deserialize the appropriate response (`GetResponse`, `SetResponse`, or `RemoveResponse`) from the server.
+- Use a `serde_json::Deserializer` with a buffered reader to efficiently parse incoming JSON data.
 
 ## 🔧 Notes
 
-- You’ll need to include `serde` in your `Cargo.toml` with both `derive` and the appropriate `serde` features for your serialization backend (e.g. JSON):
+- Make sure you’ve included `serde` and `serde_json` in your `Cargo.toml`:
   ```toml
   serde = { version = "1", features = ["derive"] }
+  serde_json = "1"
   ```
-- These enums will be used to serialize/deserialize messages between `KvsClient` and `KvsServer`.
+- You’ll need to handle flushing the writer after each request to ensure the data is sent immediately.
+- The deserializer allows you to efficiently stream multiple JSON values from a single connection.
 
-Get ready to define your protocol for clean and robust communication!
+With this complete, your client can now send requests and handle responses in a structured, type-safe way. Power up your KVS!
 

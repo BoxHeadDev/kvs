@@ -1,23 +1,36 @@
 #  Challenge
 
-## 🧪 Challenge: Build a Full CLI Interface for `kvs-client`
+## 🚀 Challenge: Build the Main Entry Point for `kvs-server`
 
-In this challenge, you’ll design and implement a full-featured command-line interface for the `kvs-client` binary using the `clap` crate.
+You're now ready to put everything together and launch the key-value store server with a production-ready `kvs-server.rs`.
 
-Your CLI should support three subcommands (`get`, `set`, and `rm`) to interact with the key-value store server. Each subcommand should send the appropriate request to the server over TCP and handle the response accordingly.
+This binary will:
+- Parse command-line arguments to configure the server (address and storage engine)
+- Log startup configuration and runtime errors
+- Open the key-value store engine
+- Run the TCP server to handle incoming requests
 
 ## 🛠 Requirements
 
-- Use `clap::Parser` and `Subcommand` to define the structure of the CLI.
-- Use `DEFAULT_LISTENING_ADDRESS` (`127.0.0.1:4000`) as the default server address.
-- Handle all errors gracefully by printing to stderr and exiting with status code 1.
-- Connect to the server using `KvsClient`, send the request, and print the result.
+- Use `clap` to parse:
+  - `--addr` to specify the listening socket address (default: `127.0.0.1:4000`)
+  - `--engine` to optionally specify the storage engine (`kvs` or `sled`)
+- Use the `log` crate to emit `info`, `warn`, and `error` logs.
+- Initialize logging using `env_logger`.
+- Gracefully handle errors and exit with code 1 if the server fails to launch.
 
-## 🧩 Tips
+## 🧩 Notes
 
-- Add `clap = { version = "4", features = ["derive"] }` to your `Cargo.toml`.
-- Make sure to replace `Opt` with `Cli` or vice versa as needed for consistency.
-- You can use `env!("CARGO_PKG_*")` variables to automatically fill in CLI metadata from `Cargo.toml`.
+- You’ll need the following dependencies in `Cargo.toml`:
+  ```toml
+  clap = { version = "4", features = ["derive"] }
+  log = "0.4"
+  env_logger = "0.10"
+  ```
+- The actual use of the `engine` argument is not implemented here — that would come later when supporting multiple engines like `sled`.
+- This starter setup always uses `KvStore`, and logs key events for visibility.
 
-This will give you a fully functional client CLI that can read input, talk to the server, and display results. Ready to wire it up? 🔌
+With this complete, running `cargo run --bin kvs-server` will launch your storage server, ready to accept client requests!
+
+🧱 Get ready to deploy your server in style!
 

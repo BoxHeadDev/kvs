@@ -1,6 +1,7 @@
 use crate::common::{GetResponse, RemoveResponse, Request, SetResponse};
 use crate::{KvsEngine, Result};
 
+use crate::thread_pool::{NaiveThreadPool, ThreadPool};
 use log::{debug, error};
 use serde_json::Deserializer;
 use std::io::{BufReader, BufWriter, Write};
@@ -23,57 +24,57 @@ impl<E: KvsEngine> KvsServer<E> {
     }
     /// Starts the key-value server, binds to the given address, and handles incoming
     /// client connections.
-    pub fn run<A: ToSocketAddrs>(mut self, addr: A) -> Result<()> {
+    pub fn run<A: ToSocketAddrs>(self, addr: A) -> Result<()> {
+        let pool = NaiveThreadPool::new(1)?;
         let listener = TcpListener::bind(addr)?;
         for stream in listener.incoming() {
-            let stream = match stream {
-                Ok(s) => s,
-                Err(e) => {
-                    error!("Connection failed: {}", e);
-                    continue;
+            let engine = self.engine.clone();
+            pool.spawn(move || match stream {
+                Ok(stream) => {
+                    if let Err(e) = serve(engine, stream) {
+                        error!("Error on serving client: {}", e);
+                    }
                 }
-            };
-
-            if let Err(e) = self.serve(stream) {
-                error!("Error serving client: {}", e);
-            }
+                Err(e) => error!("Connection failed: {}", e),
+            })
         }
         Ok(())
     }
-    /// Handles a single client connection over the given `TcpStream`.
-    fn serve(&mut self, tcp: TcpStream) -> Result<()> {
-        let peer_addr = tcp.peer_addr()?;
-        let reader = BufReader::new(tcp.try_clone()?);
-        let mut writer = BufWriter::new(tcp);
-        let reqs = Deserializer::from_reader(reader).into_iter::<Request>();
+}
 
-        macro_rules! send_resp {
-            ($resp:expr) => {{
-                let resp = $resp;
-                serde_json::to_writer(&mut writer, &resp)?;
-                writer.flush()?;
-                debug!("Response sent to {}: {:?}", peer_addr, resp);
-            }};
-        }
+/// Handles a single client connection over the given `TcpStream`.
+fn serve<E: KvsEngine>(engine: E, tcp: TcpStream) -> Result<()> {
+    let peer_addr = tcp.peer_addr()?;
+    let reader = BufReader::new(tcp.try_clone()?);
+    let mut writer = BufWriter::new(tcp);
+    let reqs = Deserializer::from_reader(reader).into_iter::<Request>();
 
-        for req in reqs {
-            let req = req?;
-            debug!("Receive request from {}: {:?}", peer_addr, req);
-            match req {
-                Request::Get { key } => send_resp!(match self.engine.get(key) {
-                    Ok(value) => GetResponse::Ok(value),
-                    Err(e) => GetResponse::Err(format!("{}", e)),
-                }),
-                Request::Set { key, value } => send_resp!(match self.engine.set(key, value) {
-                    Ok(_) => SetResponse::Ok(()),
-                    Err(e) => SetResponse::Err(format!("{}", e)),
-                }),
-                Request::Remove { key } => send_resp!(match self.engine.remove(key) {
-                    Ok(_) => RemoveResponse::Ok(()),
-                    Err(e) => RemoveResponse::Err(format!("{}", e)),
-                }),
-            };
-        }
-        Ok(())
+    macro_rules! send_resp {
+        ($resp:expr) => {{
+            let resp = $resp;
+            serde_json::to_writer(&mut writer, &resp)?;
+            writer.flush()?;
+            debug!("Response sent to {}: {:?}", peer_addr, resp);
+        }};
     }
+
+    for req in reqs {
+        let req = req?;
+        debug!("Receive request from {}: {:?}", peer_addr, req);
+        match req {
+            Request::Get { key } => send_resp!(match engine.get(key) {
+                Ok(value) => GetResponse::Ok(value),
+                Err(e) => GetResponse::Err(format!("{}", e)),
+            }),
+            Request::Set { key, value } => send_resp!(match engine.set(key, value) {
+                Ok(_) => SetResponse::Ok(()),
+                Err(e) => SetResponse::Err(format!("{}", e)),
+            }),
+            Request::Remove { key } => send_resp!(match engine.remove(key) {
+                Ok(_) => RemoveResponse::Ok(()),
+                Err(e) => RemoveResponse::Err(format!("{}", e)),
+            }),
+        };
+    }
+    Ok(())
 }

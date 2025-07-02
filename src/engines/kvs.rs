@@ -6,6 +6,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use super::KvsEngine;
 use crate::{KvsError, Result};
@@ -29,7 +30,12 @@ const COMPACTION_THRESHOLD: u64 = 1024 * 1024;
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Clone)]
 pub struct KvStore {
+    imp: Arc<Mutex<KvStoreImpl>>,
+}
+
+struct KvStoreImpl {
     // directory for the log and other data.
     path: PathBuf,
     // map generation number to the file reader.
@@ -41,6 +47,37 @@ pub struct KvStore {
     // the number of bytes representing "stale" commands that could be
     // deleted during a compaction.
     uncompacted: u64,
+}
+
+impl KvsEngine for KvStore {
+    /// Sets the value of a string key to a string.
+    ///
+    /// If the key already exists, the previous value will be overwritten.
+    ///
+    /// # Errors
+    ///
+    /// It propagates I/O or serialization errors during writing the log.
+    fn set(&self, key: String, value: String) -> Result<()> {
+        self.imp.lock().unwrap().set(key, value)
+    }
+
+    /// Gets the string value of a given string key.
+    ///
+    /// Returns `None` if the given key does not exist.
+    fn get(&self, key: String) -> Result<Option<String>> {
+        self.imp.lock().unwrap().get(key)
+    }
+
+    /// Removes a given key.
+    ///
+    /// # Error
+    ///
+    /// It returns `KvsError::KeyNotFound` if the given key is not found.
+    ///
+    /// It propagates I/O or serialization errors during writing the log.
+    fn remove(&self, key: String) -> Result<()> {
+        self.imp.lock().unwrap().remove(key)
+    }
 }
 
 impl KvStore {
@@ -70,67 +107,22 @@ impl KvStore {
         let current_file = file_list.last().unwrap_or(&0) + 1;
         let writer = new_log_file(&path, current_file, &mut readers)?;
 
-        Ok(KvStore {
+        let imp = KvStoreImpl {
             path,
             readers,
             writer,
             current_file,
             index,
             uncompacted,
+        };
+
+        Ok(KvStore {
+            imp: Arc::new(Mutex::new(imp)),
         })
-    }
-
-    /// Clears stale entries in the log.
-    pub fn compact(&mut self) -> Result<()> {
-        // increase current gen by 2. current_gen + 1 is for the compaction file.
-        let compaction_file = self.current_file + 1;
-        self.current_file += 2;
-        self.writer = self.new_log_file(self.current_file)?;
-
-        let mut compaction_writer = self.new_log_file(compaction_file)?;
-
-        let mut new_pos = 0; // pos in the new log file.
-        for cmd_pos in &mut self.index.values_mut() {
-            let reader = self
-                .readers
-                .get_mut(&cmd_pos.file_id)
-                .expect("Cannot find log reader");
-            if reader.pos != cmd_pos.pos {
-                reader.seek(SeekFrom::Start(cmd_pos.pos))?;
-            }
-
-            let mut entry_reader = reader.take(cmd_pos.len);
-            let len = io::copy(&mut entry_reader, &mut compaction_writer)?;
-            *cmd_pos = (compaction_file, new_pos..new_pos + len).into();
-            new_pos += len;
-        }
-        compaction_writer.flush()?;
-
-        // remove stale log files.
-        let stale_files: Vec<_> = self
-            .readers
-            .keys()
-            .filter(|&&file_id| file_id < compaction_file)
-            .cloned()
-            .collect();
-        for stale_file in stale_files {
-            self.readers.remove(&stale_file);
-            fs::remove_file(log_path(&self.path, stale_file))?;
-        }
-        self.uncompacted = 0;
-
-        Ok(())
-    }
-
-    /// Create a new log file with given generation number and add the reader to the readers map.
-    ///
-    /// Returns the writer to the log.
-    fn new_log_file(&mut self, file_id: u64) -> Result<BufWriterWithPos<File>> {
-        new_log_file(&self.path, file_id, &mut self.readers)
     }
 }
 
-impl KvsEngine for KvStore {
+impl KvStoreImpl {
     /// Sets the value of a string key to a string.
     ///
     /// If the key already exists, the previous value will be overwritten.
@@ -204,6 +196,55 @@ impl KvsEngine for KvStore {
         } else {
             Err(KvsError::KeyNotFound)
         }
+    }
+
+    /// Clears stale entries in the log.
+    pub fn compact(&mut self) -> Result<()> {
+        // increase current gen by 2. current_gen + 1 is for the compaction file.
+        let compaction_file = self.current_file + 1;
+        self.current_file += 2;
+        self.writer = self.new_log_file(self.current_file)?;
+
+        let mut compaction_writer = self.new_log_file(compaction_file)?;
+
+        let mut new_pos = 0; // pos in the new log file.
+        for cmd_pos in &mut self.index.values_mut() {
+            let reader = self
+                .readers
+                .get_mut(&cmd_pos.file_id)
+                .expect("Cannot find log reader");
+            if reader.pos != cmd_pos.pos {
+                reader.seek(SeekFrom::Start(cmd_pos.pos))?;
+            }
+
+            let mut entry_reader = reader.take(cmd_pos.len);
+            let len = io::copy(&mut entry_reader, &mut compaction_writer)?;
+            *cmd_pos = (compaction_file, new_pos..new_pos + len).into();
+            new_pos += len;
+        }
+        compaction_writer.flush()?;
+
+        // remove stale log files.
+        let stale_files: Vec<_> = self
+            .readers
+            .keys()
+            .filter(|&&file_id| file_id < compaction_file)
+            .cloned()
+            .collect();
+        for stale_file in stale_files {
+            self.readers.remove(&stale_file);
+            fs::remove_file(log_path(&self.path, stale_file))?;
+        }
+        self.uncompacted = 0;
+
+        Ok(())
+    }
+
+    /// Create a new log file with given generation number and add the reader to the readers map.
+    ///
+    /// Returns the writer to the log.
+    fn new_log_file(&mut self, file_id: u64) -> Result<BufWriterWithPos<File>> {
+        new_log_file(&self.path, file_id, &mut self.readers)
     }
 }
 

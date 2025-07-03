@@ -96,22 +96,13 @@ fn run(opt: Opt, engine: Engine) -> Result<()> {
     match engine {
         Engine::kvs => {
             let store = KvStore::open(current_dir()?)?;
-            run_with_engine(store, pool, opt.addr)
+            KvsServer::new(store, pool).run(opt.addr)
         }
         Engine::sled => {
-            let db = sled::open(current_dir()?)?;
-            let store = SledKvsEngine::new(db);
-            run_with_engine(store, pool, opt.addr)
+            let store = SledKvsEngine::open(current_dir()?)?;
+            KvsServer::new(store, pool).run(opt.addr)
         }
     }
-}
-
-pub fn run_with_engine<E: KvsEngine, P: ThreadPool>(
-    engine: E,
-    pool: P,
-    addr: SocketAddr,
-) -> Result<()> {
-    KvsServer::new(engine, pool).run(addr)
 }
 
 fn current_engine() -> Result<Option<Engine>> {

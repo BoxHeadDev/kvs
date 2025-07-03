@@ -50,37 +50,6 @@ struct KvStoreImpl {
 }
 
 impl KvsEngine for KvStore {
-    /// Sets the value of a string key to a string.
-    ///
-    /// If the key already exists, the previous value will be overwritten.
-    ///
-    /// # Errors
-    ///
-    /// It propagates I/O or serialization errors during writing the log.
-    fn set(&self, key: String, value: String) -> Result<()> {
-        self.imp.lock().unwrap().set(key, value)
-    }
-
-    /// Gets the string value of a given string key.
-    ///
-    /// Returns `None` if the given key does not exist.
-    fn get(&self, key: String) -> Result<Option<String>> {
-        self.imp.lock().unwrap().get(key)
-    }
-
-    /// Removes a given key.
-    ///
-    /// # Error
-    ///
-    /// It returns `KvsError::KeyNotFound` if the given key is not found.
-    ///
-    /// It propagates I/O or serialization errors during writing the log.
-    fn remove(&self, key: String) -> Result<()> {
-        self.imp.lock().unwrap().remove(key)
-    }
-}
-
-impl KvStore {
     /// Opens a `KvStore` with the given path.
     ///
     /// This will create a new directory if the given one does not exist.
@@ -88,7 +57,7 @@ impl KvStore {
     /// # Errors
     ///
     /// It propagates I/O or deserialization errors during the log replay.
-    pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
+    fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
         let path = path.into();
         fs::create_dir_all(&path)?;
 
@@ -119,6 +88,35 @@ impl KvStore {
         Ok(KvStore {
             imp: Arc::new(Mutex::new(imp)),
         })
+    }
+
+    /// Sets the value of a string key to a string.
+    ///
+    /// If the key already exists, the previous value will be overwritten.
+    ///
+    /// # Errors
+    ///
+    /// It propagates I/O or serialization errors during writing the log.
+    fn set(&self, key: String, value: String) -> Result<()> {
+        self.imp.lock().unwrap().set(key, value)
+    }
+
+    /// Gets the string value of a given string key.
+    ///
+    /// Returns `None` if the given key does not exist.
+    fn get(&self, key: String) -> Result<Option<String>> {
+        self.imp.lock().unwrap().get(key)
+    }
+
+    /// Removes a given key.
+    ///
+    /// # Error
+    ///
+    /// It returns `KvsError::KeyNotFound` if the given key is not found.
+    ///
+    /// It propagates I/O or serialization errors during writing the log.
+    fn remove(&self, key: String) -> Result<()> {
+        self.imp.lock().unwrap().remove(key)
     }
 }
 

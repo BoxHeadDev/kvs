@@ -1,9 +1,16 @@
 //! This module provides various key value storage engines.
 
 use crate::Result;
+use std::path::PathBuf;
 
 /// Trait for a key value storage engine.
 pub trait KvsEngine: Clone + Send + 'static {
+    /// Open the `KvsEngine` at a given path and return it.
+    ///
+    /// # Errors
+    ///
+    /// If there was a problem opening the `KvsEngine`.
+    fn open(path: impl Into<PathBuf>) -> Result<Self>;
     /// Sets the value of a string key to a string.
     ///
     /// If the key already exists, the previous value will be overwritten.

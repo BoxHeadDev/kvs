@@ -1,6 +1,7 @@
 use super::KvsEngine;
 use crate::{KvsError, Result};
 use sled::{Db, Tree};
+use std::path::PathBuf;
 
 /// Wrapper of `sled::Db`
 #[derive(Clone)]
@@ -14,6 +15,10 @@ impl SledKvsEngine {
 }
 
 impl KvsEngine for SledKvsEngine {
+    fn open(path: impl Into<PathBuf>) -> Result<Self> {
+        let db = sled::open(path.into())?;
+        Ok(SledKvsEngine(db))
+    }
     fn set(&self, key: String, value: String) -> Result<()> {
         let tree: &Tree = &self.0;
         tree.insert(key, value.into_bytes()).map(|_| ())?;

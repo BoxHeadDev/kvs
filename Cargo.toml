@@ -29,5 +29,9 @@ panic-control = "0.1.4"
 crossbeam-utils = "0.6.5"
 
 [[bench]]
-name = "engine_bench"
+name = "single_threaded"
+harness = false
+
+[[bench]]
+name = "multi_threaded"
 harness = false

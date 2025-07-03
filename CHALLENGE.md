@@ -1,41 +1,48 @@
 #  Challenge
 
-## 🚀 Challenge: rayon threadpool
+## 🚀 Challenge: abstract threadpool
 
-## 🧠 Challenge: Implement a Rayon-Based ThreadPool
+As in the previous project where you created a `KvsEngine` abstraction to compare different key-value engine implementations, now you are going to use the `ThreadPool` abstraction in a similar way—allowing interchangeable thread pool strategies (like `SharedQueueThreadPool`, `RayonThreadPool`, etc.).
 
-Your task is to implement a `RayonThreadPool` that wraps the [`rayon::ThreadPool`](https://docs.rs/rayon/latest/rayon/struct.ThreadPool.html) and integrates it with the existing thread pool abstraction in your project.
+### 🎯 Goal
 
-### 🔧 Files to Create or Update
+Refactor your `KvServer` to support any implementation of the `ThreadPool` trait by making it generic over the thread pool type.
 
-#### ✅ `rayon.rs`
-Create a new file at `src/thread_pool/rayon.rs` (or wherever your `ThreadPool` trait is defined) and implement the `RayonThreadPool` struct so it adheres to the `ThreadPool` trait.
+### 🛠️ Steps to Complete
 
-#### 🛠 `server.rs`
-Update your server initialization code to optionally use RayonThreadPool in place of your default thread pool, based on configuration or a CLI flag (if applicable).
+#### 1. Add a Second Type Parameter for `ThreadPool`
 
-### 🧪 Goal: Pass This Test
-Your implementation should pass the following test, typically found in `threadpool.rs`:
+Update the definition of `KvServer` to take a second generic type for the thread pool:
 
 ```rust
-fn rayon_thread_pool_spawn_counter() -> Result<()> {
-    let pool = RayonThreadPool::new(4)?;
-    spawn_counter(pool)
+use crate::thread_pool::ThreadPool;
+use crate::KvsEngine;
+
+pub struct KvsServer<E: KvsEngine, P: ThreadPool> {
+    engine: E,
+    pool: P,
 }
 ```
-The `spawn_counter` function checks that submitted jobs correctly run on the thread pool.
 
-### 📝 Notes
+#### 2. Update the `KvServer` Constructor
 
-- Add `rayon` to your `Cargo.toml`:
+Update the constructor method to accept the thread pool:
+
 ```rust
-[dependencies]
-rayon = "1.8"
+impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
+    pub fn new(engine: E, pool: P) -> Self {
+        KvsServer { engine, pool }
+    }
+}
 ```
+#### 3. Use the Thread Pool to Distribute Work
 
-- Make sure RayonThreadPool is included in your module tree, e.g., in mod.rs:
+Within your run method or wherever requests are handled, use self.pool.spawn(...) to delegate request handling tasks:
 ```rust
-pub mod rayon;
+self.pool.spawn(move || {
+    // Handle client connection, parse request, respond using `self.engine`
+});
 ```
+Note: You may need to clone or arc-wrap the engine if you're moving it into the thread closure.
 
-- Ensure your ThreadPool trait is in scope and correctly implemented for RayonThreadPool.
+

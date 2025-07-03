@@ -13,23 +13,23 @@ use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 /// The `KvsServer` listens for incoming client connections, deserializes
 /// requests, processes them through the engine, and serializes responses back
 /// to the client. It supports `GET`, `SET`, and `REMOVE` operations.
-pub struct KvsServer<E: KvsEngine> {
+pub struct KvsServer<E: KvsEngine, P: ThreadPool> {
     engine: E,
+    pool: P,
 }
 
-impl<E: KvsEngine> KvsServer<E> {
+impl<E: KvsEngine, P: ThreadPool> KvsServer<E, P> {
     /// Creates a new `KvsServer` instance with the provided key-value storage engine.
-    pub fn new(engine: E) -> Self {
-        Self { engine }
+    pub fn new(engine: E, pool: P) -> Self {
+        Self { engine, pool }
     }
     /// Starts the key-value server, binds to the given address, and handles incoming
     /// client connections.
     pub fn run<A: ToSocketAddrs>(self, addr: A) -> Result<()> {
-        let pool = RayonThreadPool::new(1)?;
         let listener = TcpListener::bind(addr)?;
         for stream in listener.incoming() {
             let engine = self.engine.clone();
-            pool.spawn(move || match stream {
+            self.pool.spawn(move || match stream {
                 Ok(stream) => {
                     if let Err(e) = serve(engine, stream) {
                         error!("Error on serving client: {}", e);

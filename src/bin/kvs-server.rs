@@ -1,4 +1,5 @@
 use clap::{Parser, ValueEnum};
+use kvs::thread_pool::*;
 use kvs::*;
 use log::{LevelFilter, error, info, warn};
 use std::env::current_dir;
@@ -90,21 +91,27 @@ fn run(opt: Opt, engine: Engine) -> Result<()> {
 
     fs::write(current_dir()?.join("engine"), engine.to_string())?;
 
+    let pool = RayonThreadPool::new(num_cpus::get() as u32)?;
+
     match engine {
         Engine::kvs => {
             let store = KvStore::open(current_dir()?)?;
-            run_with_engine(store, opt.addr)
+            run_with_engine(store, pool, opt.addr)
         }
         Engine::sled => {
             let db = sled::open(current_dir()?)?;
             let store = SledKvsEngine::new(db);
-            run_with_engine(store, opt.addr)
+            run_with_engine(store, pool, opt.addr)
         }
     }
 }
 
-fn run_with_engine<E: KvsEngine>(engine: E, addr: SocketAddr) -> Result<()> {
-    KvsServer::new(engine).run(addr)
+pub fn run_with_engine<E: KvsEngine, P: ThreadPool>(
+    engine: E,
+    pool: P,
+    addr: SocketAddr,
+) -> Result<()> {
+    KvsServer::new(engine, pool).run(addr)
 }
 
 fn current_engine() -> Result<Option<Engine>> {

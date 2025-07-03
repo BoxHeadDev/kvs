@@ -20,7 +20,7 @@ const COMPACTION_THRESHOLD: u64 = 1024 * 1024;
 /// A `BTreeMap` in memory stores the keys and the value locations for fast query.
 ///
 /// ```rust
-/// # use kvs::{KvStore, Result};
+/// # use kvs::{KvsEngine, KvStore, Result};
 /// # fn try_main() -> Result<()> {
 /// use std::env::current_dir;
 /// let mut store = KvStore::open(current_dir()?)?;
@@ -477,36 +477,11 @@ pub enum Command {
 }
 
 impl Command {
-    /// Creates a new `Set` command with the specified key and value.
-    ///
-    /// # Arguments
-    ///
-    /// * `key` - A `String` representing the key to be set.
-    /// * `value` - A `String` representing the value to associate with the key.
-    ///
-    /// # Example
-    ///
-    /// `` `
-    /// # use kvs::Command;
-    /// let cmd = Command::set("name".to_string(), "Alice".to_string());
-    /// ```
-    pub fn set(key: String, value: String) -> Command {
+    fn set(key: String, value: String) -> Command {
         Command::Set { key, value }
     }
 
-    /// Creates a new `Remove` command for the specified key.
-    ///
-    /// # Arguments
-    ///
-    /// * `key` - A `String` representing the key to be removed.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use kvs::Command;
-    /// let cmd = Command::remove("name".to_string());
-    /// ```
-    pub fn remove(key: String) -> Command {
+    fn remove(key: String) -> Command {
         Command::Remove { key }
     }
 }

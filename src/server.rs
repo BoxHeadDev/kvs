@@ -1,7 +1,7 @@
 use crate::common::{GetResponse, RemoveResponse, Request, SetResponse};
 use crate::{KvsEngine, Result};
 
-use crate::thread_pool::{SharedQueueThreadPool, ThreadPool};
+use crate::thread_pool::*;
 use log::{debug, error};
 use serde_json::Deserializer;
 use std::io::{BufReader, BufWriter, Write};
@@ -25,7 +25,7 @@ impl<E: KvsEngine> KvsServer<E> {
     /// Starts the key-value server, binds to the given address, and handles incoming
     /// client connections.
     pub fn run<A: ToSocketAddrs>(self, addr: A) -> Result<()> {
-        let pool = SharedQueueThreadPool::new(1)?;
+        let pool = RayonThreadPool::new(1)?;
         let listener = TcpListener::bind(addr)?;
         for stream in listener.incoming() {
             let engine = self.engine.clone();
